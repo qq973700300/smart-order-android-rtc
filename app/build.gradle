@@ -1,0 +1,78 @@
+plugins {
+    alias(libs.plugins.android.application)
+}
+
+android {
+    namespace 'com.example.test5'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.test5"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        multiDexEnabled true
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+
+        buildConfigField "String", "AIGC_PROXY_HOST", "\"http://192.168.110.64:3001\""
+        buildConfigField "String", "AIGC_SCENE_ID", "\"Restaurant\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    packaging {
+        resources {
+            pickFirsts += [
+                    'META-INF/androidx.localbroadcastmanager_localbroadcastmanager.version',
+                    'META-INF/androidx.appcompat_appcompat.version',
+                    'META-INF/androidx.core_core.version',
+            ]
+        }
+        jniLibs {
+            pickFirsts += [
+                    'lib/arm64-v8a/libbytertc_fdk-aac_extension.so',
+                    'lib/arm64-v8a/libbytertc_nico_extension.so',
+                    'lib/armeabi-v7a/libbytertc_fdk-aac_extension.so',
+                    'lib/armeabi-v7a/libbytertc_nico_extension.so',
+            ]
+        }
+    }
+}
+
+// VolcEngineRTC 会传递 com.android.support:28.0.0，与 AndroidX 不能共存（APIExample 用 Jetifier + 排除）
+configurations.configureEach {
+    exclude group: 'com.android.support'
+}
+
+dependencies {
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.constraintlayout
+    implementation libs.recyclerview
+    implementation libs.okhttp
+    implementation libs.gson
+    implementation(libs.volc.rtc) {
+        exclude group: 'com.android.support'
+    }
+
+    testImplementation libs.junit
+    androidTestImplementation libs.ext.junit
+    androidTestImplementation libs.espresso.core
+}

@@ -1,0 +1,28 @@
+[versions]
+agp = "8.5.0"
+junit = "4.13.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+# 对齐 APIExample，避免与 VolcEngineRTC 旧 Support 传递依赖冲突
+appcompat = "1.2.0"
+material = "1.9.0"
+constraintlayout = "2.1.4"
+recyclerview = "1.3.2"
+okhttp = "4.12.0"
+gson = "2.11.0"
+volcRtc = "3.60.102.4900"
+
+[libraries]
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+volc-rtc = { group = "com.volcengine", name = "VolcEngineRTC", version.ref = "volcRtc" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

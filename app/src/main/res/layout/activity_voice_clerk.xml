@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+
+    xmlns:tools="http://schemas.android.com/tools"
+
+    android:id="@+id/voice_clerk_root"
+
+    android:layout_width="match_parent"
+
+    android:layout_height="match_parent"
+
+    tools:context=".VoiceClerkActivity">
+
+
+
+    <com.google.android.material.appbar.AppBarLayout
+
+        android:layout_width="match_parent"
+
+        android:layout_height="wrap_content">
+
+
+
+        <com.google.android.material.appbar.MaterialToolbar
+
+            android:id="@+id/voice_clerk_toolbar"
+
+            android:layout_width="match_parent"
+
+            android:layout_height="wrap_content"
+
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+
+            app:title="@string/voice_clerk_title" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+
+
+    <androidx.core.widget.NestedScrollView
+
+        android:layout_width="match_parent"
+
+        android:layout_height="match_parent"
+
+        android:padding="16dp"
+
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+
+
+        <LinearLayout
+
+            android:layout_width="match_parent"
+
+            android:layout_height="wrap_content"
+
+            android:orientation="vertical">
+
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+
+                android:id="@+id/manual_order_button"
+
+                style="@style/Widget.Material3.Button.TonalButton"
+
+                android:layout_width="0dp"
+
+                android:layout_height="wrap_content"
+
+                android:layout_weight="1"
+
+                android:text="@string/manual_order_entry"
+
+                app:icon="@android:drawable/ic_menu_agenda"
+
+                app:iconPadding="8dp" />
+
+
+
+            <com.google.android.material.button.MaterialButton
+
+                android:id="@+id/api_debug_button"
+
+                style="@style/Widget.Material3.Button.TonalButton"
+
+                android:layout_width="0dp"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginStart="8dp"
+
+                android:layout_weight="1"
+
+                android:text="@string/order_subscribe_debug_entry"
+
+                app:icon="@android:drawable/ic_menu_send"
+
+                app:iconPadding="8dp" />
+
+            </LinearLayout>
+
+
+
+            <TextView
+
+                android:id="@+id/status_text"
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="12dp"
+
+                android:text="@string/voice_clerk_idle"
+
+                android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+
+
+            <TextView
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="16dp"
+
+                android:text="@string/cart_label"
+
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+
+
+            <TextView
+
+                android:id="@+id/cart_text"
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="4dp"
+
+                android:text="@string/cart_empty"
+
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+
+                android:textColor="?android:attr/textColorSecondary" />
+
+
+
+            <TextView
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="12dp"
+
+                android:text="@string/last_order_label"
+
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+
+
+            <TextView
+
+                android:id="@+id/last_order_text"
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="4dp"
+
+                android:text="@string/last_order_empty"
+
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+
+                android:textColor="?android:attr/textColorSecondary" />
+
+
+
+            <TextView
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="16dp"
+
+                android:text="@string/subtitle_label"
+
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+
+
+            <ScrollView
+
+                android:id="@+id/subtitle_scroll"
+
+                android:layout_width="match_parent"
+
+                android:layout_height="160dp"
+
+                android:layout_marginTop="4dp"
+
+                android:fillViewport="true"
+
+                android:scrollbars="vertical">
+
+                <TextView
+
+                    android:id="@+id/subtitle_text"
+
+                    android:layout_width="match_parent"
+
+                    android:layout_height="wrap_content"
+
+                    android:text="@string/subtitle_empty"
+
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            </ScrollView>
+
+
+
+            <com.google.android.material.button.MaterialButton
+
+                android:id="@+id/start_button"
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="24dp"
+
+                android:text="@string/start_voice_order" />
+
+
+
+            <com.google.android.material.button.MaterialButton
+
+                android:id="@+id/stop_button"
+
+                style="@style/Widget.Material3.Button.TonalButton"
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="8dp"
+
+                android:enabled="false"
+
+                android:text="@string/stop_voice_order" />
+
+
+
+            <TextView
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:layout_marginTop="16dp"
+
+                android:text="@string/proxy_hint"
+
+                android:textAppearance="?attr/textAppearanceBodySmall"
+
+                android:textColor="?android:attr/textColorSecondary" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+

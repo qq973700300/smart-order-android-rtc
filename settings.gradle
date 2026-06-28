@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url = uri("https://artifact.bytedance.com/repository/Volcengine/") }
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // 火山 RTC SDK 及传递依赖（对齐 APIExample）
+        maven { url = uri("https://artifact.bytedance.com/repository/Volcengine/") }
+        // VolcEngineRTC 可选依赖：华为耳返 audiokit
+        maven { url = uri("https://developer.huawei.com/repo/") }
+    }
+}
+
+rootProject.name = "test5"
+include ':app'
