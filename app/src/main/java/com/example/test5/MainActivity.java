@@ -17,5 +17,20 @@ public class MainActivity extends AppCompatActivity {
         MaterialButton openButton = findViewById(R.id.open_voice_clerk_button);
         openButton.setOnClickListener(v ->
                 startActivity(new Intent(this, VoiceClerkActivity.class)));
+
+        findViewById(R.id.open_tashi_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, TashiStockBinDebugActivity.class)));
+
+        findViewById(R.id.open_yuejiang_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, YuejiangRobotDebugActivity.class)));
+
+        findViewById(R.id.open_drum_pot_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, DrumPotModbusDebugActivity.class)));
+
+        findViewById(R.id.open_lebai_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, LebaiDebugActivity.class)));
+
+        findViewById(R.id.open_order_subscribe_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, OrderSubscribeDebugActivity.class)));
     }
 }

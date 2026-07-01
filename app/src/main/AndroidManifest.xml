@@ -21,6 +21,22 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".TashiStockBinDebugActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".YuejiangRobotDebugActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".DrumPotModbusDebugActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".LebaiDebugActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".OrderSubscribeDebugActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

@@ -89,6 +89,8 @@ public class VoiceClerkActivity extends AppCompatActivity {
                 startActivity(new Intent(this, ManualOrderActivity.class)));
         findViewById(R.id.api_debug_button).setOnClickListener(v ->
                 startActivity(new Intent(this, OrderSubscribeDebugActivity.class)));
+        findViewById(R.id.lebai_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, LebaiDebugActivity.class)));
 
         rtcManager.setListener(new RtcAigcManager.Listener() {
             @Override
