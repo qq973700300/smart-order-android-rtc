@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 复制本文件为 iflytek_wake.xml，填入讯飞控制台凭证 -->
+    <!-- https://console.xfyun.cn/services/AIKit -->
+    <string name="iflytek_app_id" translatable="false">YOUR_APP_ID</string>
+    <string name="iflytek_api_key" translatable="false">YOUR_API_KEY</string>
+    <string name="iflytek_api_secret" translatable="false">YOUR_API_SECRET</string>
+
+    <string-array name="wake_keywords">
+        <item>你好小哇</item>
+        <item>小哇店长</item>
+        <item>小哇在吗</item>
+    </string-array>
+
+    <string name="wake_channel_name">语音唤醒</string>
+    <string name="wake_channel_desc">后台监听唤醒词，命中后进入语音点餐</string>
+    <string name="wake_notification_title">店员小哇 · 待机监听</string>
+    <string name="wake_status_init">正在初始化…</string>
+    <string name="wake_status_auth_wait">等待 AIKit 鉴权（首次需联网）…</string>
+    <string name="wake_status_auth_failed">AIKit 鉴权失败（%1$d），请检查密钥与网络</string>
+    <string name="wake_status_listening">监听中：你好小哇 / 小哇店长 / 小哇在吗</string>
+    <string name="wake_status_paused_rtc">对话中，唤醒已暂停</string>
+    <string name="wake_status_triggered">已唤醒：%1$s</string>
+    <string name="wake_status_error">唤醒异常：%1$s</string>
+    <string name="wake_home_hint">说「你好小哇」等唤醒词可自动进入语音点餐</string>
+    <string name="wake_home_listening">唤醒监听已开启</string>
+    <string name="wake_home_need_mic">需要麦克风权限才能开启唤醒监听</string>
+    <string name="wake_home_need_notify">需要通知权限才能后台持续监听</string>
+    <string name="wake_launch_notification_title">已唤醒，点击进入语音点餐</string>
+    <string name="wake_launch_notification_body">识别到「%1$s」，点此处开始对话</string>
+
+    <string name="wake_debug_entry">唤醒调试</string>
+    <string name="wake_debug_title">讯飞 IVW 唤醒调试</string>
+    <string name="wake_debug_hint">本页使用独立唤醒引擎，进入时会暂停后台唤醒服务。SDK 资源路径为 aikit_resources/ivw/。 bundled 资源仅适配 Demo 词「你好小迪」，自定义词需在控制台制作资源。门限默认 800，越小越灵敏。</string>
+    <string name="wake_debug_auth_label">AIKit 鉴权</string>
+    <string name="wake_debug_auth_pending">等待鉴权（首次需联网）…</string>
+    <string name="wake_debug_auth_ok">鉴权成功，可开始监听</string>
+    <string name="wake_debug_auth_failed">鉴权失败（code=%1$d）\n%2$s</string>
+    <string name="wake_debug_auth_not_ready">鉴权未完成，请稍候或检查网络与密钥</string>
+    <string name="wake_debug_refresh_auth">刷新鉴权状态</string>
+    <string name="wake_debug_keywords_label">唤醒词</string>
+    <string name="wake_debug_demo_keyword">填入 Demo 词：你好小迪</string>
+    <string name="wake_debug_keywords_hint">多个词用中文或英文逗号分隔</string>
+    <string name="wake_debug_keywords_empty">请至少填写一个唤醒词</string>
+    <string name="wake_debug_threshold_hint">门限分数（默认 800）</string>
+    <string name="wake_debug_threshold_invalid">门限须为有效数字</string>
+    <string name="wake_debug_start">开始监听</string>
+    <string name="wake_debug_stop">停止监听</string>
+    <string name="wake_debug_state_label">引擎状态</string>
+    <string name="wake_debug_state_idle">未启动</string>
+    <string name="wake_debug_state_hit">已唤醒：%1$s</string>
+    <string name="wake_debug_state_error">异常，见下方日志</string>
+    <string name="wake_debug_volume_idle">当前音量：—</string>
+    <string name="wake_debug_volume">当前音量：%1$d dB（估算）</string>
+    <string name="wake_debug_log_label">运行日志</string>
+    <string name="wake_debug_log_empty">暂无日志</string>
+    <string name="wake_debug_clear_log">清空日志</string>
+</resources>

@@ -75,10 +75,27 @@ public final class AigcProxyApi {
     }
 
     public static void stopVoiceChat(String sceneId) throws IOException {
-        invokeProxy("StopVoiceChat", sceneId, null, null);
+        invokeProxy("StopVoiceChat", sceneId, null, null, null);
+    }
+
+    /** 打断当前 AI 语音输出（唱歌前调用，避免 TTS 与 MP3 叠在一起）。 */
+    public static void interruptVoiceChat(String sceneId) throws IOException {
+        JsonObject extra = new JsonObject();
+        extra.addProperty("Command", "Interrupt");
+        invokeProxy("UpdateVoiceChat", sceneId, null, null, extra);
     }
 
     private static void invokeProxy(String action, String sceneId, String userId, String roomId) throws IOException {
+        invokeProxy(action, sceneId, userId, roomId, null);
+    }
+
+    private static void invokeProxy(
+            String action,
+            String sceneId,
+            String userId,
+            String roomId,
+            JsonObject extra
+    ) throws IOException {
         JsonObject payload = new JsonObject();
         payload.addProperty("SceneID", sceneId);
         if (userId != null && !userId.isEmpty()) {
@@ -86,6 +103,11 @@ public final class AigcProxyApi {
         }
         if (roomId != null && !roomId.isEmpty()) {
             payload.addProperty("RoomId", roomId);
+        }
+        if (extra != null) {
+            for (String key : extra.keySet()) {
+                payload.add(key, extra.get(key));
+            }
         }
         String url = proxyHost() + "/proxy?Action=" + action + "&Version=2024-12-01";
         Request request = new Request.Builder()

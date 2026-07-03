@@ -39,8 +39,7 @@ public final class RestaurantFunctionHandler {
     public static final String TOOL_GET_CART = "get_cart";
 
     public static final String TOOL_SUBMIT_ORDER = "submit_order";
-
-
+    public static final String TOOL_SING_SONG = "sing_song";
 
     public interface CartListener {
 
@@ -54,7 +53,10 @@ public final class RestaurantFunctionHandler {
 
     }
 
+    public interface SingListener {
 
+        void onSingRequested();
+    }
 
     private final Gson gson = new Gson();
 
@@ -65,8 +67,7 @@ public final class RestaurantFunctionHandler {
     private CartListener cartListener;
 
     private SubmitListener submitListener;
-
-
+    private SingListener singListener;
 
     public void setCartListener(CartListener cartListener) {
 
@@ -80,7 +81,9 @@ public final class RestaurantFunctionHandler {
 
     }
 
-
+    public void setSingListener(SingListener singListener) {
+        this.singListener = singListener;
+    }
 
     public String execute(String toolName, String argumentsJson) {
 
@@ -132,6 +135,10 @@ public final class RestaurantFunctionHandler {
 
                     result = submitOrderSync();
 
+                    break;
+
+                case TOOL_SING_SONG:
+                    result = singSong();
                     break;
 
                 default:
@@ -355,6 +362,17 @@ public final class RestaurantFunctionHandler {
     }
 
 
+
+    private String singSong() {
+        if (singListener != null) {
+            singListener.onSingRequested();
+        }
+        JsonObject ok = new JsonObject();
+        ok.addProperty("ok", true);
+        ok.addProperty("message", "正在播放《鹅企的说唱》");
+        ok.addProperty("song", "eqi_qiye_rap");
+        return gson.toJson(ok);
+    }
 
     private String formatCart(String prefix) {
 

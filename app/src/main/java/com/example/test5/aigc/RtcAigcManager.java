@@ -21,6 +21,8 @@ import com.ss.bytertc.engine.type.MessageConfig;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -45,12 +47,18 @@ public final class RtcAigcManager {
     private final Context appContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final RestaurantFunctionHandler functionHandler = new RestaurantFunctionHandler();
+    private final SingSongPlayer singSongPlayer = new SingSongPlayer();
+    private final SingStopKeywordListener singStopKeywordListener = new SingStopKeywordListener();
+    private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor();
     private Listener listener;
 
     private RTCEngine rtcEngine;
     private RTCRoom rtcRoom;
     private String botUserId = "";
+    private String sceneId = "";
     private boolean cameraEnabled;
+    private boolean singMode;
+    private boolean voiceInputPausedForSing;
 
     public RtcAigcManager(Context context) {
         this.appContext = context.getApplicationContext();
@@ -64,6 +72,16 @@ public final class RtcAigcManager {
                 mainHandler.post(() -> listener.onOrderSubmitted(success, message, summary));
             }
         });
+        functionHandler.setSingListener(this::beginSingSession);
+        singSongPlayer.setListener(this::onSongPlaybackEnded);
+    }
+
+    public void setSceneId(String sceneId) {
+        this.sceneId = sceneId != null ? sceneId : "";
+    }
+
+    public boolean isSingMode() {
+        return singMode;
     }
 
     public void setListener(Listener listener) {
@@ -191,8 +209,12 @@ public final class RtcAigcManager {
     }
 
     public void release() {
+        finishSingSession(false, false);
         stop();
+        singSongPlayer.release();
+        singStopKeywordListener.stop();
         functionHandler.shutdown();
+        backgroundExecutor.shutdownNow();
     }
 
     private void startVideoCaptureOnMainThread() {
@@ -219,6 +241,7 @@ public final class RtcAigcManager {
 
     private void stopRtcOnly() {
         try {
+            finishSingSession(false, false);
             if (rtcEngine != null && cameraEnabled) {
                 rtcEngine.stopVideoCapture();
                 cameraEnabled = false;
@@ -271,6 +294,10 @@ public final class RtcAigcManager {
         String args = function.has("arguments") ? function.get("arguments").getAsString() : "{}";
 
         Log.i(TAG, "FunctionCall " + name + " " + args);
+        if (RestaurantFunctionHandler.TOOL_SING_SONG.equals(name) && singMode) {
+            sendFunctionResult(toolCallId, "{\"ok\":true,\"message\":\"已经在播放歌曲\"}");
+            return;
+        }
         String content = functionHandler.execute(name, args);
         sendFunctionResult(toolCallId, content);
     }
@@ -299,6 +326,9 @@ public final class RtcAigcManager {
             boolean definite = item.has("definite") && item.get("definite").getAsBoolean();
             boolean paragraph = item.has("paragraph") && item.get("paragraph").getAsBoolean();
             boolean fromBot = !isEmpty(botUserId) && (botUserId.equals(userId) || userId.contains("voiceChat_"));
+            if (singMode && fromBot) {
+                return;
+            }
             if (listener != null && (!isEmpty(userId) || !text.isEmpty())) {
                 listener.onSubtitle(userId, text, definite, paragraph, fromBot);
             }
@@ -317,6 +347,94 @@ public final class RtcAigcManager {
         Log.e(TAG, message);
         if (listener != null) {
             listener.onError(message);
+        }
+    }
+
+    private void beginSingSession() {
+        mainHandler.post(() -> {
+            if (singMode) {
+                return;
+            }
+            singMode = true;
+            pauseVoiceInputForSing();
+            notifyStatus("正在播放《鹅企的说唱》，说「停下」或「别唱」可停止");
+            singStopKeywordListener.start(appContext, phrase -> mainHandler.post(this::stopSingByUser));
+            singSongPlayer.play(appContext, SingSongPlayer.ASSET_EQI_QIYE_RAP);
+        });
+        if (!isEmpty(sceneId)) {
+            backgroundExecutor.execute(() -> {
+                try {
+                    AigcProxyApi.interruptVoiceChat(sceneId);
+                } catch (Exception e) {
+                    Log.w(TAG, "interruptVoiceChat failed", e);
+                }
+            });
+        }
+    }
+
+    private void stopSingByUser() {
+        if (!singMode) {
+            return;
+        }
+        Log.i(TAG, "Sing stopped by user keyword");
+        finishSingSession(true, true);
+    }
+
+    private void onSongPlaybackEnded() {
+        finishSingSession(false, true);
+    }
+
+    /** @param stoppedByUser 是否用户口令停止；@param notifyStatus 是否更新状态文案 */
+    private void finishSingSession(boolean stoppedByUser, boolean notifyStatus) {
+        mainHandler.post(() -> {
+            if (!singMode) {
+                return;
+            }
+            singMode = false;
+            singStopKeywordListener.stop();
+            singSongPlayer.stop();
+            resumeVoiceInputAfterSing();
+            if (notifyStatus && listener != null) {
+                listener.onStatus(stoppedByUser
+                        ? "已停止播放，可以继续点餐"
+                        : "播放结束，可以继续点餐");
+            }
+        });
+    }
+
+    private void pauseVoiceInputForSing() {
+        if (voiceInputPausedForSing) {
+            return;
+        }
+        voiceInputPausedForSing = true;
+        try {
+            if (rtcRoom != null) {
+                rtcRoom.publishStreamAudio(false);
+            }
+            if (rtcEngine != null) {
+                rtcEngine.stopAudioCapture();
+            }
+            Log.i(TAG, "Voice input paused for sing mode");
+        } catch (Exception e) {
+            Log.w(TAG, "pauseVoiceInputForSing", e);
+        }
+    }
+
+    private void resumeVoiceInputAfterSing() {
+        if (!voiceInputPausedForSing) {
+            return;
+        }
+        voiceInputPausedForSing = false;
+        try {
+            if (rtcEngine != null) {
+                rtcEngine.startAudioCapture();
+            }
+            if (rtcRoom != null) {
+                rtcRoom.publishStreamAudio(true);
+            }
+            Log.i(TAG, "Voice input resumed after sing mode");
+        } catch (Exception e) {
+            Log.w(TAG, "resumeVoiceInputAfterSing", e);
         }
     }
 

@@ -22,6 +22,7 @@ import com.example.test5.aigc.RtcAigcManager;
 import com.example.test5.aigc.SubtitleTracker;
 import com.example.test5.order.OrderCart;
 import com.example.test5.order.OrderSubmitDialogs;
+import com.example.test5.wake.WakeForegroundService;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 
@@ -30,6 +31,9 @@ import java.util.concurrent.Executors;
 
 /** RTC-AIGC 语音点餐：进房 → StartVoiceChat → Function Calling；视觉场景后台推摄像头给 AI。 */
 public class VoiceClerkActivity extends AppCompatActivity {
+
+    public static final String EXTRA_AUTO_START = "auto_start";
+    public static final String EXTRA_WAKE_KEYWORD = "wake_keyword";
 
     private TextView statusView;
     private TextView cartView;
@@ -46,6 +50,9 @@ public class VoiceClerkActivity extends AppCompatActivity {
 
     private boolean sessionRunning;
     private boolean visionEnabled;
+    private boolean wakePausedForSession;
+    private boolean pendingAutoStart;
+    private String pendingWakeKeyword = "";
     private String sceneId = AigcProxyApi.defaultSceneId();
     private AigcSceneInfo cachedSceneInfo;
 
@@ -72,6 +79,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         rtcManager = new RtcAigcManager(this);
+        rtcManager.setSceneId(sceneId);
         setContentView(R.layout.activity_voice_clerk);
 
         MaterialToolbar toolbar = findViewById(R.id.voice_clerk_toolbar);
@@ -123,7 +131,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
                 runOnMain(() -> {
                     statusView.setText(message);
                     toast(message);
-                    resetButtons();
+                    abortSession();
                 });
             }
         });
@@ -131,11 +139,80 @@ public class VoiceClerkActivity extends AppCompatActivity {
         startButton.setOnClickListener(v -> ensureMicAndStart());
         stopButton.setOnClickListener(v -> stopSession());
         refreshLastOrderDisplay();
+        handleLaunchIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleLaunchIntent(intent);
+    }
+
+    private void handleLaunchIntent(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_AUTO_START, false)) {
+            return;
+        }
+        pendingAutoStart = true;
+        pendingWakeKeyword = parseWakeKeyword(intent.getStringExtra(EXTRA_WAKE_KEYWORD));
+        intent.removeExtra(EXTRA_AUTO_START);
+        intent.removeExtra(EXTRA_WAKE_KEYWORD);
+
+        if (sessionRunning) {
+            pendingAutoStart = false;
+            statusView.setText(R.string.voice_clerk_running);
+            return;
+        }
+        if (hasWindowFocus()) {
+            scheduleAutoStart();
+        }
+    }
+
+    private void scheduleAutoStart() {
+        if (!pendingAutoStart || sessionRunning) {
+            return;
+        }
+        pendingAutoStart = false;
+        if (!pendingWakeKeyword.isEmpty()) {
+            statusView.setText(getString(R.string.voice_clerk_wake_starting, pendingWakeKeyword));
+        } else {
+            statusView.setText(R.string.voice_clerk_wake_starting_generic);
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
+        // 等待唤醒引擎释放麦克风后再连 RTC
+        mainHandler.removeCallbacks(autoStartRunnable);
+        mainHandler.postDelayed(autoStartRunnable, 800L);
+    }
+
+    private final Runnable autoStartRunnable = this::ensureMicAndStart;
+
+    /** 唤醒回调可能是 JSON，尽量提取 keyword 字段用于展示。 */
+    private static String parseWakeKeyword(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return "";
+        }
+        int idx = raw.indexOf("\"keyword\"");
+        if (idx >= 0) {
+            int start = raw.indexOf('"', idx + 9);
+            if (start >= 0) {
+                int end = raw.indexOf('"', start + 1);
+                if (end > start) {
+                    return raw.substring(start + 1, end);
+                }
+            }
+        }
+        return raw.length() > 32 ? raw.substring(0, 32) + "…" : raw;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        if (pendingAutoStart && !sessionRunning) {
+            scheduleAutoStart();
+        }
         OrderCart.getInstance().setChangeListener(cartText ->
                 runOnMain(() -> cartView.setText(
                         cartText.isEmpty() ? getString(R.string.cart_empty) : cartText)));
@@ -152,12 +229,14 @@ public class VoiceClerkActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        mainHandler.removeCallbacks(autoStartRunnable);
         super.onDestroy();
         stopSession();
         if (rtcManager != null) {
             rtcManager.release();
         }
         executor.shutdownNow();
+        WakeForegroundService.resumeAfterRtc(this);
     }
 
     private void ensureMicAndStart() {
@@ -179,6 +258,8 @@ public class VoiceClerkActivity extends AppCompatActivity {
             return;
         }
         sessionRunning = true;
+        wakePausedForSession = true;
+        WakeForegroundService.pauseForRtc(this);
         startButton.setEnabled(false);
         stopButton.setEnabled(true);
         subtitleTracker.clear();
@@ -200,20 +281,19 @@ public class VoiceClerkActivity extends AppCompatActivity {
                 runOnMain(() -> {
                     statusView.setText(getString(R.string.voice_clerk_error, e.getMessage()));
                     toast(e.getMessage());
-                    resetButtons();
+                    abortSession();
                 });
             }
         });
     }
 
-    /** 根据服务端 isVision 决定是否开启视觉模式与摄像头 */
     private void continueStartSession(AigcSceneInfo sceneInfo) {
         executor.execute(() -> {
             if (sceneInfo == null || sceneInfo.rtc == null) {
                 runOnMain(() -> {
                     statusView.setText(getString(R.string.voice_clerk_error, "场景配置为空"));
                     toast(getString(R.string.voice_clerk_error, "场景配置为空"));
-                    resetButtons();
+                    abortSession();
                 });
                 return;
             }
@@ -232,7 +312,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
                 runOnMain(() -> {
                     statusView.setText(getString(R.string.voice_clerk_error, e.getMessage()));
                     toast(e.getMessage());
-                    resetButtons();
+                    abortSession();
                 });
                 return;
             }
@@ -255,8 +335,12 @@ public class VoiceClerkActivity extends AppCompatActivity {
         }
         sessionRunning = false;
         visionEnabled = false;
-        resetButtons();
+        resetUiButtons();
         statusView.setText(R.string.voice_clerk_stopping);
+        if (wakePausedForSession) {
+            wakePausedForSession = false;
+            WakeForegroundService.resumeAfterRtc(this);
+        }
         executor.execute(() -> {
             try {
                 AigcProxyApi.stopVoiceChat(sceneId);
@@ -266,8 +350,17 @@ public class VoiceClerkActivity extends AppCompatActivity {
         });
     }
 
-    private void resetButtons() {
+    private void abortSession() {
         sessionRunning = false;
+        visionEnabled = false;
+        resetUiButtons();
+        if (wakePausedForSession) {
+            wakePausedForSession = false;
+            WakeForegroundService.resumeAfterRtc(this);
+        }
+    }
+
+    private void resetUiButtons() {
         startButton.setEnabled(true);
         stopButton.setEnabled(false);
     }
