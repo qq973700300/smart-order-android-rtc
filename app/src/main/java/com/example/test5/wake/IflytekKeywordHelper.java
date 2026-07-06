@@ -31,6 +31,47 @@ public final class IflytekKeywordHelper {
         return context.getResources().getStringArray(R.array.wake_keywords);
     }
 
+    /**
+     * 解析调试页输入的唤醒词。讯飞 keyword.txt 每行一词并以 {@code ;} 结尾，
+     * 输入时推荐用分号分隔；也兼容逗号与换行。
+     */
+    public static String[] parseKeywordInput(CharSequence raw) {
+        if (raw == null || raw.length() == 0) {
+            return new String[0];
+        }
+        String text = raw.toString()
+                .replace('；', ';')
+                .replace('，', ',')
+                .replace('\r', '\n');
+        String[] parts = text.split("[;,\\n,]+");
+        List<String> keywords = new ArrayList<>();
+        for (String part : parts) {
+            String word = part.trim();
+            while (word.endsWith(";")) {
+                word = word.substring(0, word.length() - 1).trim();
+            }
+            if (!word.isEmpty()) {
+                keywords.add(word);
+            }
+        }
+        return keywords.toArray(new String[0]);
+    }
+
+    /** 默认唤醒词展示格式（分号分隔，与 keyword.txt 一致）。 */
+    public static String formatKeywordsForInput(String[] keywords) {
+        if (keywords == null || keywords.length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < keywords.length; i++) {
+            if (i > 0) {
+                sb.append(';');
+            }
+            sb.append(keywords[i]);
+        }
+        return sb.toString();
+    }
+
     private static String[] loadFromAsset(AssetManager assets) {
         List<String> keywords = new ArrayList<>();
         try (InputStream in = assets.open(KEYWORD_ASSET);

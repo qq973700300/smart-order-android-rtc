@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 复制本文件为 iflytek_wake.xml，填入讯飞控制台凭证 -->
+    <!-- 复制到 app/src/main/res/values/iflytek_wake.xml，填入讯飞控制台凭证 -->
     <!-- https://console.xfyun.cn/services/AIKit -->
     <string name="iflytek_app_id" translatable="false">YOUR_APP_ID</string>
     <string name="iflytek_api_key" translatable="false">YOUR_API_KEY</string>
@@ -8,8 +8,8 @@
 
     <string-array name="wake_keywords">
         <item>你好小哇</item>
-        <item>小哇店长</item>
-        <item>小哇在吗</item>
+        <item>小哇同学</item>
+        <item>小哇店员</item>
     </string-array>
 
     <string name="wake_channel_name">语音唤醒</string>
@@ -18,7 +18,7 @@
     <string name="wake_status_init">正在初始化…</string>
     <string name="wake_status_auth_wait">等待 AIKit 鉴权（首次需联网）…</string>
     <string name="wake_status_auth_failed">AIKit 鉴权失败（%1$d），请检查密钥与网络</string>
-    <string name="wake_status_listening">监听中：你好小哇 / 小哇店长 / 小哇在吗</string>
+    <string name="wake_status_listening">监听中：你好小哇 / 小哇同学 / 小哇店员</string>
     <string name="wake_status_paused_rtc">对话中，唤醒已暂停</string>
     <string name="wake_status_triggered">已唤醒：%1$s</string>
     <string name="wake_status_error">唤醒异常：%1$s</string>
@@ -40,7 +40,7 @@
     <string name="wake_debug_refresh_auth">刷新鉴权状态</string>
     <string name="wake_debug_keywords_label">唤醒词</string>
     <string name="wake_debug_demo_keyword">填入 Demo 词：你好小迪</string>
-    <string name="wake_debug_keywords_hint">多个词用中文或英文逗号分隔</string>
+    <string name="wake_debug_keywords_hint">多个词用分号分隔，如：你好小哇;小哇店长（与 keyword.txt 格式一致，逗号也可）</string>
     <string name="wake_debug_keywords_empty">请至少填写一个唤醒词</string>
     <string name="wake_debug_threshold_hint">门限分数（默认 800）</string>
     <string name="wake_debug_threshold_invalid">门限须为有效数字</string>

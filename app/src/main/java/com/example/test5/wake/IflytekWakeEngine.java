@@ -23,7 +23,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -89,10 +92,29 @@ public final class IflytekWakeEngine {
     }
 
     public void stop() {
+        stopAndAwait(0);
+    }
+
+    /** 停止唤醒并等待麦克风释放（RTC 进房前调用）。 */
+    public void stopAndAwait(long timeoutMs) {
         if (workerHandler == null) {
             return;
         }
-        workerHandler.post(this::stopInternal);
+        CountDownLatch latch = new CountDownLatch(1);
+        workerHandler.post(() -> {
+            stopInternal();
+            latch.countDown();
+        });
+        if (timeoutMs <= 0) {
+            return;
+        }
+        try {
+            if (!latch.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+                Log.w(TAG, "stopAndAwait timeout " + timeoutMs + "ms");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void ensureWorker() {
@@ -164,7 +186,10 @@ public final class IflytekWakeEngine {
         }
 
         AiRequest.Builder paramBuilder = AiRequest.builder();
-        paramBuilder.param("wdec_param_nCmThreshold", buildThresholdParam());
+        String[] effectiveKeywords = effectiveKeywords();
+        String thresholdParam = buildThresholdParam(effectiveKeywords);
+        Log.i(TAG, "keywords=" + effectiveKeywords.length + " threshold=" + thresholdParam);
+        paramBuilder.param("wdec_param_nCmThreshold", thresholdParam);
         paramBuilder.param("gramLoad", true);
         sessionOpen.set(false);
         aiHandle = AiHelper.getInst().start(ABILITY_ID, paramBuilder.build(), null);
@@ -177,15 +202,44 @@ public final class IflytekWakeEngine {
         return 0;
     }
 
-    private String buildThresholdParam() {
-        StringBuilder sb = new StringBuilder("0");
-        for (int i = 0; i < keywords.length; i++) {
-            sb.append(' ').append(i).append(':').append(cmThresholdScore);
+    /**
+     * 讯飞文档：wdec_param_nCmThreshold 格式为「文件索引 词索引:门限」，多词用 | 分隔。
+     * 例：1 个词 {@code 0 0:600}；3 个词 {@code 0 0:600|0 1:600|0 2:600}
+     * 见 https://www.xfyun.cn/doc/asr/AIkit_awaken/Android-SDK.html
+     */
+    private String buildThresholdParam(String[] effectiveKeywords) {
+        if (effectiveKeywords.length == 0) {
+            return "0 0:" + cmThresholdScore;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < effectiveKeywords.length; i++) {
+            if (i > 0) {
+                sb.append('|');
+            }
+            sb.append(0).append(' ').append(i).append(':').append(cmThresholdScore);
         }
         return sb.toString();
     }
 
+    private String[] effectiveKeywords() {
+        List<String> list = new ArrayList<>();
+        for (String keyword : keywords) {
+            if (keyword == null) {
+                continue;
+            }
+            String trimmed = keyword.trim();
+            while (trimmed.endsWith(";")) {
+                trimmed = trimmed.substring(0, trimmed.length() - 1).trim();
+            }
+            if (!trimmed.isEmpty()) {
+                list.add(trimmed);
+            }
+        }
+        return list.toArray(new String[0]);
+    }
+
     private boolean writeKeywordFile() {
+        String[] effectiveKeywords = effectiveKeywords();
         File keywordFile = new File(ivwDir, "keyword.txt");
         File binFile = new File(ivwDir, "keyword.bin");
         //noinspection ResultOfMethodCallIgnored
@@ -194,12 +248,8 @@ public final class IflytekWakeEngine {
         binFile.delete();
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(keywordFile), StandardCharsets.UTF_8))) {
-            for (String keyword : keywords) {
-                String trimmed = keyword == null ? "" : keyword.trim();
-                if (trimmed.isEmpty()) {
-                    continue;
-                }
-                writer.write(trimmed);
+            for (String keyword : effectiveKeywords) {
+                writer.write(keyword);
                 writer.write(';');
                 writer.newLine();
             }

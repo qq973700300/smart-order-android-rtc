@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.test5.BuildConfig;
 import com.example.test5.wake.WakeForegroundService;
+import com.example.test5.wake.WakeConfig;
 import com.example.test5.wake.WakeStatusHolder;
 import com.example.test5.update.AppUpdateManager;
 import com.google.android.material.button.MaterialButton;
@@ -81,6 +82,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            WakeForegroundService.stopIfRunning(this);
+            wakeServiceStarted = false;
+            updateWakeStatus(getString(R.string.wake_service_disabled));
+            return;
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED) {
             WakeForegroundService.start(this);
@@ -124,6 +131,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void ensureWakePermissions() {
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            updateWakeStatus(getString(R.string.wake_service_disabled));
+            return;
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             updateWakeStatus(getString(R.string.wake_home_hint));

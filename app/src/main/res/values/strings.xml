@@ -11,6 +11,10 @@
     <string name="voice_clerk_running_vision">对话中（摄像头已传给 AI，无本地预览）。</string>
     <string name="voice_clerk_running_no_camera">对话中（未授权摄像头，AI 无法看画面）。</string>
     <string name="voice_clerk_stopping">正在停止…</string>
+    <string name="voice_clerk_auto_end_submit">订单已提交，对话即将结束…</string>
+    <string name="voice_clerk_auto_end_conversation">对话即将结束…</string>
+    <string name="voice_clerk_auto_end_silence">长时间无对话，自动结束</string>
+    <string name="voice_clerk_auto_end_max_duration">对话已达上限，自动结束</string>
     <string name="voice_clerk_error">连接失败：%1$s</string>
     <string name="start_voice_order">开始对话</string>
     <string name="stop_voice_order">结束对话</string>

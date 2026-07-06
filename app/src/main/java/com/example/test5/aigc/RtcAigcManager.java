@@ -41,6 +41,9 @@ public final class RtcAigcManager {
 
         void onOrderSubmitted(boolean success, String message, String submittedSummary);
 
+        default void onEndConversationRequested() {
+        }
+
         void onError(String message);
     }
 
@@ -73,6 +76,11 @@ public final class RtcAigcManager {
             }
         });
         functionHandler.setSingListener(this::beginSingSession);
+        functionHandler.setEndConversationListener(() -> {
+            if (listener != null) {
+                mainHandler.post(() -> listener.onEndConversationRequested());
+            }
+        });
         singSongPlayer.setListener(this::onSongPlaybackEnded);
     }
 
@@ -134,6 +142,7 @@ public final class RtcAigcManager {
                 Log.w(TAG, "RTC onWarning code=" + warn);
             }
         });
+        RtcAudioHelper.preparePlayback(appContext);
 
         rtcRoom = rtcEngine.createRTCRoom(rtc.roomId);
         rtcRoom.setRTCRoomEventHandler(new IRTCRoomEventHandler() {
@@ -155,6 +164,9 @@ public final class RtcAigcManager {
             @Override
             public void onUserPublishStreamAudio(String streamId, com.ss.bytertc.engine.data.StreamInfo streamInfo, boolean isPublish) {
                 Log.i(TAG, "onUserPublishStreamAudio uid=" + streamInfo.userId + " publish=" + isPublish);
+                if (isPublish) {
+                    RtcAudioHelper.preparePlayback(appContext);
+                }
             }
 
             @Override
@@ -175,14 +187,22 @@ public final class RtcAigcManager {
         rtcEngine.startAudioCapture();
 
         UserInfo userInfo = new UserInfo(rtc.userId, "");
+        boolean autoPublishAudio = true;
+        boolean autoPublishVideo = startCamera;
+        boolean autoSubscribeAudio = true;
+        boolean autoSubscribeVideo = startCamera;
         RTCRoomConfig roomConfig = new RTCRoomConfig(
                 ChannelProfile.CHANNEL_PROFILE_CHAT_ROOM,
                 "",
-                true,
-                visionMode,
-                true,
-                false
+                autoPublishAudio,
+                autoPublishVideo,
+                autoSubscribeAudio,
+                autoSubscribeVideo
         );
+        Log.i(TAG, "roomConfig publishAudio=" + autoPublishAudio
+                + " publishVideo=" + autoPublishVideo
+                + " subscribeAudio=" + autoSubscribeAudio
+                + " subscribeVideo=" + autoSubscribeVideo);
         int joinResult = rtcRoom.joinRoom(rtc.token, userInfo, true, roomConfig);
         Log.i(TAG, "joinRoom result=" + joinResult + " (0=ok)");
         if (joinResult != 0) {
@@ -196,6 +216,8 @@ public final class RtcAigcManager {
         }
 
         notifyStatus("已进房，等待启动智能体…");
+        RtcAudioHelper.preparePlayback(appContext, 500);
+        RtcAudioHelper.preparePlayback(appContext, 2000);
     }
 
     public void start(AigcSceneInfo sceneInfo) {
@@ -242,6 +264,7 @@ public final class RtcAigcManager {
     private void stopRtcOnly() {
         try {
             finishSingSession(false, false);
+            RtcAudioHelper.release(appContext);
             if (rtcEngine != null && cameraEnabled) {
                 rtcEngine.stopVideoCapture();
                 cameraEnabled = false;

@@ -43,6 +43,10 @@ public class WakeForegroundService extends Service {
     private long lastWakeLaunchAtMs;
 
     public static void start(Context context) {
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            stopIfRunning(context);
+            return;
+        }
         Intent intent = new Intent(context, WakeForegroundService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent);
@@ -52,6 +56,9 @@ public class WakeForegroundService extends Service {
     }
 
     public static void resumeAfterRtc(Context context) {
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            return;
+        }
         Intent intent = new Intent(context, WakeForegroundService.class);
         intent.setAction(ACTION_RESUME);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -62,6 +69,9 @@ public class WakeForegroundService extends Service {
     }
 
     public static void pauseForRtc(Context context) {
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            return;
+        }
         Intent intent = new Intent(context, WakeForegroundService.class);
         intent.setAction(ACTION_PAUSE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -69,6 +79,17 @@ public class WakeForegroundService extends Service {
         } else {
             context.startService(intent);
         }
+    }
+
+    /** 关闭已在运行的唤醒服务。 */
+    public static void stopIfRunning(Context context) {
+        WakeForegroundService service = instance;
+        if (service != null) {
+            service.stopListeningInternal();
+            service.stopForeground(true);
+            service.stopSelf();
+        }
+        context.stopService(new Intent(context, WakeForegroundService.class));
     }
 
     @Override
@@ -82,6 +103,12 @@ public class WakeForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            stopListeningInternal();
+            stopForeground(true);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (intent != null && ACTION_RESUME.equals(intent.getAction())) {
             resumeListening();
             return START_STICKY;
@@ -173,25 +200,36 @@ public class WakeForegroundService extends Service {
         mainHandler.removeCallbacks(authPollRunnable);
         engineRunning = false;
         pausedForRtc = false;
-        if (wakeEngine != null) {
-            wakeEngine.stop();
-            wakeEngine = null;
+        releaseWakeEngine(2000L);
+    }
+
+    private void releaseWakeEngine(long awaitMs) {
+        IflytekWakeEngine engine = wakeEngine;
+        wakeEngine = null;
+        if (engine != null) {
+            engine.stopAndAwait(awaitMs);
         }
     }
 
     private void pauseForRtc() {
-        if (!engineRunning) {
-            return;
-        }
         pausedForRtc = true;
         engineRunning = false;
-        if (wakeEngine != null) {
-            wakeEngine.stop();
-            wakeEngine = null;
-        }
+        releaseWakeEngine(2000L);
         updateNotification(getString(R.string.wake_status_paused_rtc));
         WakeStatusHolder.update(WakeStatusHolder.State.PAUSED_RTC,
                 getString(R.string.wake_status_paused_rtc));
+    }
+
+    /** 唤醒进 RTC 前确保 IVW 已释放麦克风。 */
+    public static void ensureMicReleased(Context context) {
+        if (!WakeConfig.ENABLE_WAKE_SERVICE) {
+            return;
+        }
+        WakeForegroundService service = instance;
+        if (service != null) {
+            service.releaseWakeEngine(2000L);
+        }
+        pauseForRtc(context);
     }
 
     private void resumeListening() {

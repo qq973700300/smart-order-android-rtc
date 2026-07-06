@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.test5.wake.IflytekSdkHolder;
 import com.example.test5.wake.IflytekWakeEngine;
+import com.example.test5.wake.IflytekKeywordHelper;
 import com.example.test5.wake.WakeForegroundService;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -24,9 +25,7 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -235,24 +234,12 @@ public class WakeDebugActivity extends AppCompatActivity {
     }
 
     private String buildDefaultKeywords() {
-        String[] defaults = getResources().getStringArray(R.array.wake_keywords);
-        return TextUtils.join("，", defaults);
+        return IflytekKeywordHelper.formatKeywordsForInput(
+                getResources().getStringArray(R.array.wake_keywords));
     }
 
     private String[] parseKeywords(CharSequence raw) {
-        if (raw == null) {
-            return new String[0];
-        }
-        String text = raw.toString().replace('，', ',');
-        String[] parts = text.split(",");
-        List<String> result = new ArrayList<>();
-        for (String part : parts) {
-            String trimmed = part.trim();
-            if (!trimmed.isEmpty()) {
-                result.add(trimmed);
-            }
-        }
-        return result.toArray(new String[0]);
+        return IflytekKeywordHelper.parseKeywordInput(raw);
     }
 
     private int parseThreshold() {

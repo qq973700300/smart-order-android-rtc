@@ -20,6 +20,7 @@ import com.example.test5.aigc.AigcProxyApi;
 import com.example.test5.aigc.AigcSceneInfo;
 import com.example.test5.aigc.RtcAigcManager;
 import com.example.test5.aigc.SubtitleTracker;
+import com.example.test5.aigc.VoiceSessionAutoEndController;
 import com.example.test5.order.OrderCart;
 import com.example.test5.order.OrderSubmitDialogs;
 import com.example.test5.wake.WakeForegroundService;
@@ -46,6 +47,8 @@ public class VoiceClerkActivity extends AppCompatActivity {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final SubtitleTracker subtitleTracker = new SubtitleTracker();
+    private final VoiceSessionAutoEndController sessionAutoEnd =
+            new VoiceSessionAutoEndController(mainHandler, this::handleAutoEnd);
     private RtcAigcManager rtcManager;
 
     private boolean sessionRunning;
@@ -109,7 +112,13 @@ public class VoiceClerkActivity extends AppCompatActivity {
             @Override
             public void onSubtitle(String userId, String text, boolean definite,
                                    boolean paragraph, boolean fromBot) {
-                runOnMain(() -> updateSubtitle(userId, text, definite, paragraph, fromBot));
+                runOnMain(() -> {
+                    updateSubtitle(userId, text, definite, paragraph, fromBot);
+                    if (sessionRunning) {
+                        sessionAutoEnd.setSingMode(rtcManager.isSingMode());
+                        sessionAutoEnd.onSubtitle(text, definite, paragraph, fromBot);
+                    }
+                });
             }
 
             @Override
@@ -123,6 +132,18 @@ public class VoiceClerkActivity extends AppCompatActivity {
                 runOnMain(() -> {
                     refreshLastOrderDisplay();
                     OrderSubmitDialogs.show(VoiceClerkActivity.this, success, message, submittedSummary);
+                    if (success && sessionRunning) {
+                        sessionAutoEnd.onSubmitSuccess();
+                    }
+                });
+            }
+
+            @Override
+            public void onEndConversationRequested() {
+                runOnMain(() -> {
+                    if (sessionRunning) {
+                        sessionAutoEnd.onEndConversationToolCalled();
+                    }
                 });
             }
 
@@ -184,7 +205,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
         }
         // 等待唤醒引擎释放麦克风后再连 RTC
         mainHandler.removeCallbacks(autoStartRunnable);
-        mainHandler.postDelayed(autoStartRunnable, 800L);
+        mainHandler.postDelayed(autoStartRunnable, 1200L);
     }
 
     private final Runnable autoStartRunnable = this::ensureMicAndStart;
@@ -230,6 +251,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         mainHandler.removeCallbacks(autoStartRunnable);
+        sessionAutoEnd.stop();
         super.onDestroy();
         stopSession();
         if (rtcManager != null) {
@@ -269,6 +291,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
         statusView.setText(R.string.voice_clerk_connecting);
 
         executor.execute(() -> {
+            WakeForegroundService.ensureMicReleased(VoiceClerkActivity.this);
             try {
                 AigcSceneInfo sceneInfo = AigcProxyApi.fetchScene(sceneId);
                 if (resolveVision(sceneInfo) && !hasCameraPermission()) {
@@ -318,6 +341,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
             }
 
             runOnMain(() -> {
+                sessionAutoEnd.start();
                 if (visionEnabled && rtcManager.isCameraEnabled()) {
                     statusView.setText(R.string.voice_clerk_running_vision);
                 } else if (visionEnabled) {
@@ -333,6 +357,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
         if (!sessionRunning) {
             return;
         }
+        sessionAutoEnd.stop();
         sessionRunning = false;
         visionEnabled = false;
         resetUiButtons();
@@ -351,6 +376,7 @@ public class VoiceClerkActivity extends AppCompatActivity {
     }
 
     private void abortSession() {
+        sessionAutoEnd.stop();
         sessionRunning = false;
         visionEnabled = false;
         resetUiButtons();
@@ -363,6 +389,32 @@ public class VoiceClerkActivity extends AppCompatActivity {
     private void resetUiButtons() {
         startButton.setEnabled(true);
         stopButton.setEnabled(false);
+    }
+
+    private void handleAutoEnd(VoiceSessionAutoEndController.EndReason reason) {
+        if (!sessionRunning) {
+            return;
+        }
+        int messageRes;
+        switch (reason) {
+            case SUBMIT_COMPLETE:
+                messageRes = R.string.voice_clerk_auto_end_submit;
+                break;
+            case END_CONVERSATION:
+                messageRes = R.string.voice_clerk_auto_end_conversation;
+                break;
+            case SILENCE:
+                messageRes = R.string.voice_clerk_auto_end_silence;
+                break;
+            case MAX_DURATION:
+            default:
+                messageRes = R.string.voice_clerk_auto_end_max_duration;
+                break;
+        }
+        statusView.setText(messageRes);
+        toast(getString(messageRes));
+        stopSession();
+        mainHandler.postDelayed(this::finish, 600L);
     }
 
     private void updateSubtitle(String userId, String text, boolean definite,

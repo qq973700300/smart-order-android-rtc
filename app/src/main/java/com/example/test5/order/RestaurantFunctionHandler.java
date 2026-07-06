@@ -39,6 +39,7 @@ public final class RestaurantFunctionHandler {
     public static final String TOOL_GET_CART = "get_cart";
 
     public static final String TOOL_SUBMIT_ORDER = "submit_order";
+    public static final String TOOL_END_CONVERSATION = "end_conversation";
     public static final String TOOL_SING_SONG = "sing_song";
 
     public interface CartListener {
@@ -58,6 +59,11 @@ public final class RestaurantFunctionHandler {
         void onSingRequested();
     }
 
+    public interface EndConversationListener {
+
+        void onEndConversationRequested();
+    }
+
     private final Gson gson = new Gson();
 
     private final OrderCart cart = OrderCart.getInstance();
@@ -68,6 +74,7 @@ public final class RestaurantFunctionHandler {
 
     private SubmitListener submitListener;
     private SingListener singListener;
+    private EndConversationListener endConversationListener;
 
     public void setCartListener(CartListener cartListener) {
 
@@ -83,6 +90,10 @@ public final class RestaurantFunctionHandler {
 
     public void setSingListener(SingListener singListener) {
         this.singListener = singListener;
+    }
+
+    public void setEndConversationListener(EndConversationListener listener) {
+        this.endConversationListener = listener;
     }
 
     public String execute(String toolName, String argumentsJson) {
@@ -135,6 +146,10 @@ public final class RestaurantFunctionHandler {
 
                     result = submitOrderSync();
 
+                    break;
+
+                case TOOL_END_CONVERSATION:
+                    result = endConversation();
                     break;
 
                 case TOOL_SING_SONG:
@@ -371,6 +386,16 @@ public final class RestaurantFunctionHandler {
         ok.addProperty("ok", true);
         ok.addProperty("message", "正在播放《鹅企的说唱》");
         ok.addProperty("song", "eqi_qiye_rap");
+        return gson.toJson(ok);
+    }
+
+    private String endConversation() {
+        if (endConversationListener != null) {
+            endConversationListener.onEndConversationRequested();
+        }
+        JsonObject ok = new JsonObject();
+        ok.addProperty("ok", true);
+        ok.addProperty("message", "已确认结束");
         return gson.toJson(ok);
     }
 
