@@ -54,6 +54,9 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.open_yuejiang_debug_button).setOnClickListener(v ->
                 startActivity(new Intent(this, YuejiangRobotDebugActivity.class)));
 
+        findViewById(R.id.open_drum_pot_opc_debug_button).setOnClickListener(v ->
+                startActivity(new Intent(this, DrumPotOpcDebugActivity.class)));
+
         findViewById(R.id.open_drum_pot_debug_button).setOnClickListener(v ->
                 startActivity(new Intent(this, DrumPotModbusDebugActivity.class)));
 

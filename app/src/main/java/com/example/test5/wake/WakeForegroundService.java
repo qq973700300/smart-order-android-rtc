@@ -168,7 +168,7 @@ public class WakeForegroundService extends Service {
         }
         String[] keywords = IflytekKeywordHelper.loadKeywords(this);
         wakeEngine = new IflytekWakeEngine(this, keywords);
-        wakeEngine.setCmThresholdScore(600);
+        wakeEngine.setCmThresholdScore(900);
         wakeEngine.setListener(new IflytekWakeEngine.Listener() {
             @Override
             public void onWakeDetected(String keyword, String rawResult) {

@@ -38,6 +38,10 @@
             android:exported="false"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".DrumPotOpcDebugActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".DrumPotModbusDebugActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

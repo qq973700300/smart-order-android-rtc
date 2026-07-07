@@ -67,6 +67,14 @@
             android:text="@string/yuejiang_debug_entry" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/open_drum_pot_opc_debug_button"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/drum_pot_opc_debug_entry" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/open_drum_pot_debug_button"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"

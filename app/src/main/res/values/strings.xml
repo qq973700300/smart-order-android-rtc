@@ -181,6 +181,67 @@
     <string name="drum_pot_error_value">请填写有效写入值</string>
     <string name="drum_pot_error_location">请填写有效目标位置</string>
 
+    <!-- 滚筒锅 OPC UA -->
+    <string name="drum_pot_opc_debug_entry">滚筒锅 OPC UA 调试</string>
+    <string name="drum_pot_opc_debug_title">滚筒锅 OPC UA 调试</string>
+    <string name="drum_pot_opc_debug_hint">局域网直连 OPC UA。平板须与 PLC 同一网段。连接后「浏览 服务器接口_1」会显示 Status、Value、DataType（同 UaExpert）。Logcat 过滤：DrumPotOpc。</string>
+    <string name="drum_pot_opc_field_endpoint">Endpoint URL</string>
+    <string name="drum_pot_opc_field_namespace">命名空间索引 ns</string>
+    <string name="drum_pot_opc_field_namespace_helper">实测为 4；子节点 NodeId 为 ns=4;i=数字</string>
+    <string name="drum_pot_opc_field_browse_node">浏览节点 NodeId（可空）</string>
+    <string name="drum_pot_opc_field_browse_node_helper">留空则从 ObjectsFolder 浏览</string>
+    <string name="drum_pot_opc_field_node_id">节点 NodeId</string>
+    <string name="drum_pot_opc_browse_label">浏览节点</string>
+    <string name="drum_pot_opc_browse_objects">浏览 Objects</string>
+    <string name="drum_pot_opc_browse_interface">浏览 服务器接口_1（ns=4;i=1）</string>
+    <string name="drum_pot_opc_hint_after_connect">已连接。请先点「浏览 服务器接口_1」加载 NodeId 映射，再使用快捷操作。</string>
+    <string name="drum_pot_opc_node_map_loaded">NodeId 映射已加载，可使用启动/锅点位等快捷按钮。</string>
+    <string name="drum_pot_opc_load_map_first">请先浏览 服务器接口_1（ns=4;i=1）加载 NodeId 映射</string>
+    <string name="drum_pot_opc_rw_label">读写节点</string>
+    <string name="drum_pot_opc_action_pulse">置1脉冲</string>
+    <string name="drum_pot_opc_quick_label">快捷操作（文档 BrowseName）</string>
+    <string name="drum_pot_opc_pos_feed">加菜位 0</string>
+    <string name="drum_pot_opc_pos_cook">炒菜位 1</string>
+    <string name="drum_pot_opc_pos_serve">倒菜位 2</string>
+    <string name="drum_pot_opc_pos_wash">洗锅位 3</string>
+    <string name="drum_pot_opc_action_move_pot">锅点位定位（先选位再点）</string>
+    <string name="drum_pot_opc_action_start">启动</string>
+    <string name="drum_pot_opc_action_stop">停止</string>
+    <string name="drum_pot_opc_action_reset">复位</string>
+    <string name="drum_pot_opc_action_wash">洗锅启动</string>
+    <string name="drum_pot_opc_rotate_label">旋转（①设转速档位 → ②锅旋转启动）</string>
+    <string name="drum_pot_opc_rotate_gear_0">转速0</string>
+    <string name="drum_pot_opc_rotate_gear_1">转速1</string>
+    <string name="drum_pot_opc_rotate_gear_2">转速2</string>
+    <string name="drum_pot_opc_rotate_gear_3">转速3</string>
+    <string name="drum_pot_opc_action_set_rotate_gear">① 设转速档位</string>
+    <string name="drum_pot_opc_action_rotate_start">② 锅旋转启动</string>
+    <string name="drum_pot_opc_action_rotate_stop">锅旋转停止</string>
+    <string name="drum_pot_opc_heat_label">加热（①设加热档位 → ②加热启动）</string>
+    <string name="drum_pot_opc_heat_gear_0">加热0</string>
+    <string name="drum_pot_opc_heat_gear_1">加热1</string>
+    <string name="drum_pot_opc_heat_gear_2">加热2</string>
+    <string name="drum_pot_opc_heat_gear_3">加热3</string>
+    <string name="drum_pot_opc_action_set_heat_gear">① 设加热档位</string>
+    <string name="drum_pot_opc_action_heat_start">② 加热启动</string>
+    <string name="drum_pot_opc_action_heat_stop">加热停止</string>
+    <string name="drum_pot_opc_selected_rotate_gear">已选转速档位：%1$d</string>
+    <string name="drum_pot_opc_selected_heat_gear">已选加热档位：%1$d</string>
+    <string name="drum_pot_opc_quick_feed_label">投料（小量测试，现场确认）</string>
+    <string name="drum_pot_opc_action_liquid_feed">液体1投500ms</string>
+    <string name="drum_pot_opc_action_solid_feed">固体1投1s</string>
+    <string name="drum_pot_opc_action_read_feed">读投料参数</string>
+    <string name="drum_pot_opc_quick_safe_label">辅助（抽油烟 / 读状态）</string>
+    <string name="drum_pot_opc_action_exhaust_on">抽油烟开</string>
+    <string name="drum_pot_opc_action_exhaust_off">抽油烟关</string>
+    <string name="drum_pot_opc_quick_read_label">只读状态（安全）</string>
+    <string name="drum_pot_opc_action_refresh_status">刷新运行状态</string>
+    <string name="drum_pot_opc_selected_pos">已选锅点位：%1$d</string>
+    <string name="drum_pot_opc_clear_log">清空日志</string>
+    <string name="drum_pot_opc_error_endpoint">请填写 Endpoint URL</string>
+    <string name="drum_pot_opc_error_node_id">请填写 NodeId</string>
+    <string name="drum_pot_opc_error_namespace">命名空间索引无效</string>
+
     <string name="app_update_version_label">当前版本 %1$s（%2$d）</string>
     <string name="app_update_check_button">检查更新</string>
     <string name="app_update_dialog_title">发现新版本</string>

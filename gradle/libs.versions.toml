@@ -11,6 +11,7 @@ recyclerview = "1.3.2"
 okhttp = "4.12.0"
 gson = "2.11.0"
 volcRtc = "3.60.102.4900"
+milo = "0.6.12"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -23,6 +24,8 @@ recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 volc-rtc = { group = "com.volcengine", name = "VolcEngineRTC", version.ref = "volcRtc" }
+milo-sdk-client = { group = "org.eclipse.milo", name = "sdk-client", version.ref = "milo" }
+milo-sdk-core = { group = "org.eclipse.milo", name = "sdk-core", version.ref = "milo" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
