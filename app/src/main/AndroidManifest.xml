@@ -28,45 +28,73 @@
         <activity
             android:name=".WakeDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".TashiStockBinDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".YuejiangRobotDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".DrumPotOpcDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".DrumPotModbusDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".LebaiDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".OrderSubscribeDebugActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".CustomMenuActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".DishsConfigManageActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".DishsConfigEditActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".ManualOrderActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".StockBinSettingsActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".DrumPotSettingsActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".AdminDebugActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".VoiceClerkActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"
+            android:screenOrientation="sensorLandscape"
             android:showWhenLocked="true"
             android:turnScreenOn="true" />
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="sensorLandscape"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

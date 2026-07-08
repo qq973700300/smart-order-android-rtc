@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.test5.device.opcua.DrumPotOpcConfig;
 import com.example.test5.device.opcua.DrumPotOpcNodes;
 import com.example.test5.device.opcua.OpcUaClientHelper;
+import com.example.test5.device.settings.DeviceSettingsStore;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -58,7 +59,7 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         disconnectButton = findViewById(R.id.opc_btn_disconnect);
 
         toolbar.setNavigationOnClickListener(v -> finish());
-        endpointInput.setText(DrumPotOpcConfig.defaultEndpointUrl());
+        endpointInput.setText(DeviceSettingsStore.getDrumPotEndpointUrl(this));
         namespaceInput.setText(String.valueOf(DrumPotOpcConfig.DEFAULT_NAMESPACE_INDEX));
         browseNodeInput.setText(DrumPotOpcConfig.SERVER_INTERFACE_NODE_ID);
         nodeIdInput.setText(DrumPotOpcConfig.SERVER_INTERFACE_NODE_ID);
@@ -387,7 +388,7 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         });
     }
 
-    /** 固体1：选择1号通道，时间1，再脉冲启动。 */
+    /** 固体1：选择通道 + 固1定时时间(DINT) + 脉冲启动（不写「固体投料时间」避免重复）。 */
     private void startSolidFeed() {
         if (!ensureConnected() || !ensureNodeMap()) {
             return;
@@ -402,10 +403,11 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
                 appendLog(client.write(
                         resolveNodeId(DrumPotOpcNodes.SOLID1_TIMER),
                         String.valueOf(DrumPotOpcConfig.FEED_SOLID_TIME)));
+            } else if (client.hasBrowseName(DrumPotOpcNodes.SOLID_TIME)) {
+                appendLog(client.write(
+                        resolveNodeId(DrumPotOpcNodes.SOLID_TIME),
+                        String.valueOf(DrumPotOpcConfig.FEED_SOLID_TIME)));
             }
-            appendLog(client.write(
-                    resolveNodeId(DrumPotOpcNodes.SOLID_TIME),
-                    String.valueOf(DrumPotOpcConfig.FEED_SOLID_TIME)));
             appendLog(client.pulseTrue(resolveNodeId(DrumPotOpcNodes.SOLID_START)));
             appendLog("--- 固体投料指令已发 ---");
         });

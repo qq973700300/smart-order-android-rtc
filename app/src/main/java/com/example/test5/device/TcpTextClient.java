@@ -2,9 +2,12 @@ package com.example.test5.device;
 
 import android.util.Log;
 
+import com.example.test5.net.NetworkDiagnostics;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
@@ -48,8 +51,13 @@ public final class TcpTextClient {
 
     public synchronized void connect(String host, int port, int timeoutMs) throws IOException {
         disconnect();
+        NetworkDiagnostics.logBeforeDeviceTcp(TAG, host, port);
         Socket s = new Socket();
         s.connect(new InetSocketAddress(host.trim(), port), timeoutMs);
+        java.net.SocketAddress remote = s.getRemoteSocketAddress();
+        InetAddress remoteAddr = remote instanceof InetSocketAddress
+                ? ((InetSocketAddress) remote).getAddress() : null;
+        NetworkDiagnostics.logSocketBound(TAG, s.getLocalAddress(), remoteAddr);
         s.setTcpNoDelay(true);
         s.setSoTimeout(0);
         socket = s;

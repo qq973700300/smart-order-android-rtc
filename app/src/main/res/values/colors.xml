@@ -3,4 +3,13 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="menu_card_stroke">#FF2E7D32</color>
+    <color name="home_background">#FFF5F7FA</color>
+    <color name="home_text_primary">#FF263238</color>
+    <color name="home_text_secondary">#FF78909C</color>
+    <color name="home_action_button">#FF00897B</color>
+    <color name="ai_avatar_core_start">#FF26C6DA</color>
+    <color name="ai_avatar_core_end">#FF00838F</color>
+    <color name="ai_avatar_ring">#FF4DD0E1</color>
+    <color name="home_subtitle_user">#FF455A64</color>
+    <color name="home_subtitle_bot">#FF00838F</color>
 </resources>

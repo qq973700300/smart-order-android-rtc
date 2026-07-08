@@ -1,6 +1,7 @@
 package com.example.test5.aigc;
 
 import com.example.test5.BuildConfig;
+import com.example.test5.net.NetworkDiagnostics;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -37,13 +38,18 @@ public final class AigcProxyApi {
     }
 
     public static AigcSceneInfo fetchScene(String sceneId) throws IOException {
+        String url = proxyHost() + "/getScenes";
+        NetworkDiagnostics.logBeforeCloudRequest("getScenes", url);
         Request request = new Request.Builder()
-                .url(proxyHost() + "/getScenes")
+                .url(url)
                 .post(RequestBody.create("{}", JSON))
                 .build();
 
         try (Response response = CLIENT.newCall(request).execute()) {
             String body = response.body() != null ? response.body().string() : "";
+            android.util.Log.i(NetworkDiagnostics.TAG,
+                    "[cloud] getScenes HTTP " + response.code()
+                            + " bodyLen=" + body.length());
             if (!response.isSuccessful()) {
                 throw new IOException("getScenes HTTP " + response.code() + ": " + body);
             }
@@ -110,6 +116,7 @@ public final class AigcProxyApi {
             }
         }
         String url = proxyHost() + "/proxy?Action=" + action + "&Version=2024-12-01";
+        NetworkDiagnostics.logBeforeCloudRequest(action, url);
         Request request = new Request.Builder()
                 .url(url)
                 .post(RequestBody.create(payload.toString(), JSON))
@@ -117,6 +124,9 @@ public final class AigcProxyApi {
 
         try (Response response = CLIENT.newCall(request).execute()) {
             String body = response.body() != null ? response.body().string() : "";
+            android.util.Log.i(NetworkDiagnostics.TAG,
+                    "[cloud] " + action + " HTTP " + response.code()
+                            + " bodyLen=" + body.length());
             if (!response.isSuccessful()) {
                 throw new IOException(action + " HTTP " + response.code() + ": " + body);
             }

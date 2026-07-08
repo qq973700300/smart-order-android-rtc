@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".DishsConfigManageActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/dishs_manage_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:title="@string/dishs_manage_title" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/dishs_search_hint"
+            app:startIconDrawable="@android:drawable/ic_menu_search">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/dishs_search_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dishs_add_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:text="@string/dishs_add" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dishs_edit_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="4dp"
+                android:layout_weight="1"
+                android:text="@string/dishs_edit" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dishs_delete_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="@string/dishs_delete" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/dishs_count_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?android:attr/textColorSecondary"
+            tools:text="共 120 道菜" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/dishs_manage_recycler"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            tools:listitem="@layout/item_dishs_config_manage" />
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

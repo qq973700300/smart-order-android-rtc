@@ -71,6 +71,41 @@ public final class SubtitleTracker {
         }
     }
 
+    public static final class DualLatest {
+        public final String userText;
+        public final String botText;
+
+        public DualLatest(String userText, String botText) {
+            this.userText = userText != null ? userText : "";
+            this.botText = botText != null ? botText : "";
+        }
+    }
+
+    /** 分别取最近一句用户话、最近一句 AI 话，可同时展示。 */
+    public DualLatest renderDualLatest() {
+        String user = "";
+        String bot = "";
+        for (Line line : lines) {
+            if (line.text == null || line.text.isEmpty()) {
+                continue;
+            }
+            if (isBotLine(line)) {
+                bot = line.text;
+            } else {
+                user = line.text;
+            }
+        }
+        return new DualLatest(user, bot);
+    }
+
+    public String renderLatest() {
+        if (lines.isEmpty()) {
+            return "";
+        }
+        Line line = lines.get(lines.size() - 1);
+        return formatSpeaker(line) + "：" + line.text;
+    }
+
     public String render() {
         StringBuilder sb = new StringBuilder();
         for (Line line : lines) {
@@ -82,9 +117,13 @@ public final class SubtitleTracker {
         return sb.toString();
     }
 
+    private boolean isBotLine(Line line) {
+        return line.fromBot || (!botUserId.isEmpty() && botUserId.equals(line.userId))
+                || line.userId.contains("voiceChat_");
+    }
+
     private String formatSpeaker(Line line) {
-        if (line.fromBot || (!botUserId.isEmpty() && botUserId.equals(line.userId))
-                || line.userId.contains("voiceChat_")) {
+        if (isBotLine(line)) {
             return botLabel;
         }
         return userLabel;

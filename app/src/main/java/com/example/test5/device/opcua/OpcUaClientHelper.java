@@ -2,6 +2,8 @@ package com.example.test5.device.opcua;
 
 import android.util.Log;
 
+import com.example.test5.net.NetworkDiagnostics;
+
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
@@ -51,6 +53,12 @@ public final class OpcUaClientHelper {
         nodeIdToDataType.clear();
         String url = endpointUrl.trim();
         Log.i(LOG_TAG, "[connect] start url=" + url + " timeoutMs=" + timeoutMs);
+        try {
+            URI uri = URI.create(url);
+            NetworkDiagnostics.logBeforeDeviceTcp(LOG_TAG, uri.getHost(), uri.getPort());
+        } catch (Exception ignored) {
+            NetworkDiagnostics.logSnapshot("opc_connect " + url);
+        }
 
         URI uri = URI.create(url);
         List<EndpointDescription> endpoints = DiscoveryClient.getEndpoints(url)
@@ -227,14 +235,15 @@ public final class OpcUaClientHelper {
         StatusCode status = client.writeValue(nodeId, DataValue.valueOnly(variant))
                 .get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
-        if (!status.isGood() && isTypeMismatch(status) && isNumericText(rawValue)) {
+        if (!status.isGood() && isNumericText(rawValue)) {
             int iv = Integer.parseInt(rawValue.trim());
             Variant fallback = writeNumericWithFallback(nodeId, iv, dataType);
-            if (fallback == null) {
+            if (fallback != null) {
+                variant = fallback;
+            } else {
                 Log.e(LOG_TAG, "[write] failed all types status=" + status + " dataType=" + dataType);
                 throw new IllegalStateException("写入失败(类型不匹配): " + status + " dataType=" + dataType);
             }
-            variant = fallback;
         } else if (!status.isGood()) {
             Log.e(LOG_TAG, "[write] failed status=" + status);
             throw new IllegalStateException("写入失败: " + status);
@@ -515,13 +524,6 @@ public final class OpcUaClientHelper {
         return dataType;
     }
 
-    /** OPC UA Bad_TypeMismatch */
-    private static final UInteger BAD_TYPE_MISMATCH = UInteger.valueOf(0x8074_0000);
-
-    private static boolean isTypeMismatch(StatusCode status) {
-        return status != null && BAD_TYPE_MISMATCH.equals(status.getValue());
-    }
-
     private static boolean isNumericText(String rawValue) {
         if (rawValue == null) {
             return false;
@@ -581,6 +583,7 @@ public final class OpcUaClientHelper {
         List<Variant> candidates = new ArrayList<>();
         if (dataType != null && dataType.contains("i=3006")) {
             candidates.add(new Variant(value));
+            candidates.add(new Variant((long) value));
             candidates.add(new Variant(UShort.valueOf(value)));
             candidates.add(new Variant((short) value));
         } else if (dataType != null && dataType.contains("i=3002")) {
@@ -588,23 +591,31 @@ public final class OpcUaClientHelper {
             candidates.add(new Variant((short) value));
             candidates.add(new Variant(value));
             candidates.add(new Variant((byte) value));
+        } else if (dataType != null && dataType.contains("Int16")) {
+            candidates.add(new Variant((short) value));
+            candidates.add(new Variant(UShort.valueOf(value)));
+            candidates.add(new Variant(value));
         } else {
             candidates.add(new Variant(UShort.valueOf(value)));
             candidates.add(new Variant((short) value));
             candidates.add(new Variant(value));
+            candidates.add(new Variant((long) value));
             candidates.add(new Variant((byte) value));
         }
+        StatusCode lastStatus = null;
         for (Variant candidate : candidates) {
             Object raw = candidate.getValue();
             Log.i(LOG_TAG, "[write] retry javaType="
                     + (raw == null ? "null" : raw.getClass().getSimpleName()));
             StatusCode status = client.writeValue(nodeId, DataValue.valueOnly(candidate))
                     .get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            lastStatus = status;
             if (status.isGood()) {
                 Log.i(LOG_TAG, "[write] fallback OK " + raw.getClass().getSimpleName());
                 return candidate;
             }
         }
+        Log.w(LOG_TAG, "[write] all fallbacks failed last=" + lastStatus + " dataType=" + dataType);
         return null;
     }
 

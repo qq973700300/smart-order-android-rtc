@@ -49,7 +49,7 @@ public final class RtcAigcManager {
 
     private final Context appContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final RestaurantFunctionHandler functionHandler = new RestaurantFunctionHandler();
+    private final RestaurantFunctionHandler functionHandler;
     private final SingSongPlayer singSongPlayer = new SingSongPlayer();
     private final SingStopKeywordListener singStopKeywordListener = new SingStopKeywordListener();
     private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor();
@@ -65,6 +65,7 @@ public final class RtcAigcManager {
 
     public RtcAigcManager(Context context) {
         this.appContext = context.getApplicationContext();
+        this.functionHandler = new RestaurantFunctionHandler(appContext);
         functionHandler.setCartListener(cartText -> {
             if (listener != null) {
                 listener.onCartUpdated(cartText);

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="12dp">
+
+    <TextView
+        android:id="@+id/manage_dish_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        tools:text="家常土豆丝" />
+
+    <TextView
+        android:id="@+id/manage_dish_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?android:attr/textColorSecondary"
+        tools:text="位置 150 · 加热 · 炒锅 65秒" />
+</LinearLayout>

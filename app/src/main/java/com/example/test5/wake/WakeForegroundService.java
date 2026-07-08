@@ -18,7 +18,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.test5.MainActivity;
 import com.example.test5.R;
-import com.example.test5.VoiceClerkActivity;
+import com.example.test5.MainActivity;
 
 /** 前台服务：24h 离线唤醒监听，命中后跳转语音点餐。 */
 public class WakeForegroundService extends Service {
@@ -287,9 +287,9 @@ public class WakeForegroundService extends Service {
     }
 
     private Intent buildVoiceClerkIntent(String keyword) {
-        Intent launch = new Intent(this, VoiceClerkActivity.class);
-        launch.putExtra(VoiceClerkActivity.EXTRA_AUTO_START, true);
-        launch.putExtra(VoiceClerkActivity.EXTRA_WAKE_KEYWORD, keyword);
+        Intent launch = new Intent(this, MainActivity.class);
+        launch.putExtra(MainActivity.EXTRA_AUTO_START, true);
+        launch.putExtra(MainActivity.EXTRA_WAKE_KEYWORD, keyword);
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP

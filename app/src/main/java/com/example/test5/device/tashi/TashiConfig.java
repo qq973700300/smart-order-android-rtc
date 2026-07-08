@@ -3,8 +3,8 @@ package com.example.test5.device.tashi;
 /** 塔石料仓 TCP 默认参数（与上位机 AppConfig.StockBinIP3 一致）。 */
 public final class TashiConfig {
 
-    public static final String DEFAULT_HOST = "192.168.2.80";
-    public static final int DEFAULT_PORT = 10123;
+    public static final String DEFAULT_HOST = "192.168.2.40";
+    public static final int DEFAULT_PORT = 10000;
 
     public static final String CMD_AOTT = "(AOTT)";
     public static final String CMD_CLEAR = "(CLEAR)";

@@ -8,6 +8,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.test5.device.TcpTextClient;
+import com.example.test5.device.settings.DeviceSettingsStore;
 import com.example.test5.device.tashi.TashiConfig;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -17,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 塔石料仓 ASCII TCP 调试页（默认 192.168.2.80:10123）。
+ * 塔石料仓 ASCII TCP 调试页（默认 192.168.2.40:10000）。
  */
 public class TashiStockBinDebugActivity extends AppCompatActivity {
 
@@ -48,8 +49,8 @@ public class TashiStockBinDebugActivity extends AppCompatActivity {
         disconnectButton = findViewById(R.id.tashi_btn_disconnect);
 
         toolbar.setNavigationOnClickListener(v -> finish());
-        hostInput.setText(TashiConfig.DEFAULT_HOST);
-        portInput.setText(String.valueOf(TashiConfig.DEFAULT_PORT));
+        hostInput.setText(DeviceSettingsStore.getStockBinHost(this));
+        portInput.setText(String.valueOf(DeviceSettingsStore.getStockBinPort(this)));
         shipCodeInput.setText("110");
 
         client.addListener(new TcpTextClient.Listener() {

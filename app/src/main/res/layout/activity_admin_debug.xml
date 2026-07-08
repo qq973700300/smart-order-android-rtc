@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/admin_debug_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:title="@string/admin_debug_title" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/wake_status_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/wake_home_hint"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_voice_clerk_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/open_voice_clerk" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="菜谱"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_dishs_manage_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/dishs_manage_entry" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="设备调试"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_wake_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/wake_debug_entry" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_tashi_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/tashi_debug_entry" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_yuejiang_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/yuejiang_debug_entry" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_drum_pot_opc_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/drum_pot_opc_debug_entry" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_drum_pot_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/drum_pot_debug_entry" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_lebai_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/lebai_debug_entry" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/open_order_subscribe_debug_button"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/order_subscribe_debug_entry" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="应用"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <TextView
+                android:id="@+id/app_version_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/check_update_button"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/app_update_check_button" />
+        </LinearLayout>
+    </ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

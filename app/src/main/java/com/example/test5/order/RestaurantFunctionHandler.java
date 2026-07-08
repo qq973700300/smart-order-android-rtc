@@ -70,11 +70,17 @@ public final class RestaurantFunctionHandler {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
+    private final DeviceFunctionHandler deviceHandler;
+
     private CartListener cartListener;
 
     private SubmitListener submitListener;
     private SingListener singListener;
     private EndConversationListener endConversationListener;
+
+    public RestaurantFunctionHandler(android.content.Context context) {
+        deviceHandler = new DeviceFunctionHandler(context);
+    }
 
     public void setCartListener(CartListener cartListener) {
 
@@ -158,7 +164,17 @@ public final class RestaurantFunctionHandler {
 
                 default:
 
-                    result = error("未知工具: " + toolName);
+                    String deviceResult = deviceHandler.execute(toolName, argumentsJson);
+
+                    if (deviceResult != null) {
+
+                        result = deviceResult;
+
+                    } else {
+
+                        result = error("未知工具: " + toolName);
+
+                    }
 
                     break;
 

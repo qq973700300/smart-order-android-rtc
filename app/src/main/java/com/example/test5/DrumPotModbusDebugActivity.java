@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 滚筒锅 Modbus TCP 调试页（默认 192.168.2.107:502）。
+ * 滚筒锅 Modbus TCP 调试页（默认 192.168.2.60:502）。
  */
 public class DrumPotModbusDebugActivity extends AppCompatActivity {
 

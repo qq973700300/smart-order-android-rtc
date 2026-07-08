@@ -12,7 +12,7 @@ public final class DrumPotOpcConfig {
 
     public static final int DEFAULT_PORT = 4840;
 
-    public static final String DEFAULT_HOST = "192.168.2.39";
+    public static final String DEFAULT_HOST = "192.168.2.60";
 
 
 
