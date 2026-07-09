@@ -12,4 +12,8 @@
     <color name="ai_avatar_ring">#FF4DD0E1</color>
     <color name="home_subtitle_user">#FF455A64</color>
     <color name="home_subtitle_bot">#FF00838F</color>
+    <color name="home_device_status_ok_bg">#FFE8F5E9</color>
+    <color name="home_device_status_ok_text">#FF2E7D32</color>
+    <color name="home_device_status_warn_bg">#FFFFEBEE</color>
+    <color name="home_device_status_warn_text">#FFC62828</color>
 </resources>

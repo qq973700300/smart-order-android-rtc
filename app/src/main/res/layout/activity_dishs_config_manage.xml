@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".DishsConfigManageActivity">
+    tools:context=".CustomMenuActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -15,14 +15,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:title="@string/dishs_manage_title" />
+            app:title="@string/home_custom_menu" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:paddingStart="@dimen/screen_content_padding_start"
+        android:paddingTop="@dimen/screen_content_padding_top"
+        android:paddingEnd="@dimen/screen_content_padding_end"
+        android:paddingBottom="@dimen/screen_content_padding_bottom"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <com.google.android.material.textfield.TextInputLayout

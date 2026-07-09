@@ -1,14 +1,12 @@
 package com.example.test5;
 
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.test5.BuildConfig;
+import com.example.test5.order.mq.OrderMqManager;
 import com.example.test5.update.AppUpdateManager;
 import com.example.test5.wake.WakeConfig;
 import com.example.test5.wake.WakeForegroundService;
@@ -20,6 +18,7 @@ import com.google.android.material.button.MaterialButton;
 public class AdminDebugActivity extends AppCompatActivity {
 
     private TextView wakeStatusView;
+    private TextView mqStatusView;
     private boolean wakeServiceStarted;
 
     @Override
@@ -31,13 +30,17 @@ public class AdminDebugActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         wakeStatusView = findViewById(R.id.wake_status_text);
+        mqStatusView = findViewById(R.id.mq_status_text);
+
+        findViewById(R.id.open_order_inbox_button).setOnClickListener(v ->
+                startActivity(new Intent(this, OrderInboxActivity.class)));
+
+        findViewById(R.id.open_mq_settings_button).setOnClickListener(v ->
+                startActivity(new Intent(this, MqSettingsActivity.class)));
 
         MaterialButton openButton = findViewById(R.id.open_voice_clerk_button);
         openButton.setOnClickListener(v ->
                 startActivity(new Intent(this, VoiceClerkActivity.class)));
-
-        findViewById(R.id.open_dishs_manage_button).setOnClickListener(v ->
-                startActivity(new Intent(this, DishsConfigManageActivity.class)));
 
         findViewById(R.id.open_tashi_debug_button).setOnClickListener(v ->
                 startActivity(new Intent(this, TashiStockBinDebugActivity.class)));
@@ -70,6 +73,7 @@ public class AdminDebugActivity extends AppCompatActivity {
                 AppUpdateManager.checkAndPrompt(this, true));
 
         refreshWakeStatusFromService();
+        refreshMqStatus();
     }
 
     @Override
@@ -79,9 +83,18 @@ public class AdminDebugActivity extends AppCompatActivity {
             WakeForegroundService.stopIfRunning(this);
             wakeServiceStarted = false;
             updateWakeStatus(getString(R.string.wake_service_disabled));
-            return;
+        } else {
+            refreshWakeStatusFromService();
         }
-        refreshWakeStatusFromService();
+        refreshMqStatus();
+    }
+
+    private void refreshMqStatus() {
+        if (mqStatusView != null) {
+            mqStatusView.setText(getString(
+                    R.string.order_mq_status_format,
+                    OrderMqManager.getInstance().getConnectionStatus()));
+        }
     }
 
     private void refreshWakeStatusFromService() {

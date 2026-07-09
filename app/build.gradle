@@ -20,7 +20,7 @@ android {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
 
-        buildConfigField "String", "AIGC_PROXY_HOST", "\"http://192.168.0.104:3001\""
+        buildConfigField "String", "AIGC_PROXY_HOST", "\"http://192.168.0.118:3001\""
         buildConfigField "String", "AIGC_SCENE_ID", "\"RestaurantXiaoning\""
     }
 
@@ -81,6 +81,7 @@ dependencies {
     implementation libs.recyclerview
     implementation libs.okhttp
     implementation libs.gson
+    implementation libs.amqp.client
     implementation libs.milo.sdk.client
     implementation libs.milo.sdk.core
     implementation(libs.volc.rtc) {

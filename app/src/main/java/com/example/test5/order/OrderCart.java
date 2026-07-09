@@ -47,11 +47,8 @@ public final class OrderCart {
         return items.getOrDefault(dishName, 0);
     }
 
-    /** 手动点餐 +/- */
+    /** 手动点餐 +/-（菜名来自本地自定义菜谱列表） */
     public void adjustQuantity(String dishName, int delta) {
-        if (!MenuCatalog.isValidDish(dishName)) {
-            return;
-        }
         int next = Math.max(0, getQuantity(dishName) + delta);
         if (next == 0) {
             items.put(dishName, 0);

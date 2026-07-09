@@ -28,6 +28,7 @@ import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,12 +44,14 @@ public final class OpcUaClientHelper {
     private static final int BATCH_READ_CHUNK = 40;
 
     private OpcUaClient client;
-    private final Map<String, String> browseNameToNodeId = new HashMap<>();
+    private volatile boolean sessionConnected;
+    private final Map<String, String> browseNameToNodeId = new LinkedHashMap<>();
     /** 浏览时缓存 NodeId → DataType，写入时按 PLC 类型编码。 */
     private final Map<String, String> nodeIdToDataType = new HashMap<>();
 
     public synchronized void connect(String endpointUrl, long timeoutMs) throws Exception {
         disconnect();
+        sessionConnected = false;
         browseNameToNodeId.clear();
         nodeIdToDataType.clear();
         String url = endpointUrl.trim();
@@ -88,10 +91,12 @@ public final class OpcUaClientHelper {
 
         client = OpcUaClient.create(config);
         client.connect().get(timeoutMs, TimeUnit.MILLISECONDS);
+        sessionConnected = true;
         Log.i(LOG_TAG, "[connect] session established OK");
     }
 
     public synchronized void disconnect() {
+        sessionConnected = false;
         if (client == null) {
             Log.i(LOG_TAG, "[disconnect] already disconnected");
             return;
@@ -116,6 +121,18 @@ public final class OpcUaClientHelper {
         return browseNameToNodeId.containsKey(browseName);
     }
 
+    /** 浏览 服务器接口_1 后，将 PLC 变量转为调试页条目（顺序与 browse 返回一致）。 */
+    public synchronized List<DrumPotOpcKnownNodes.Entry> getInterfaceVariableEntries() {
+        List<DrumPotOpcKnownNodes.Entry> list = new ArrayList<>(browseNameToNodeId.size());
+        for (Map.Entry<String, String> item : browseNameToNodeId.entrySet()) {
+            String label = item.getKey();
+            String nodeId = item.getValue();
+            String dataType = nodeIdToDataType.getOrDefault(nodeId, "");
+            list.add(DrumPotOpcVariableRules.toEntry(label, nodeId, dataType));
+        }
+        return list;
+    }
+
     /** 浏览服务器接口根节点，建立 BrowseName → NodeId 映射（供快捷按钮使用）。 */
     public synchronized String loadInterfaceNodeMap(String interfaceNodeId) throws Exception {
         ensureConnected();
@@ -131,70 +148,28 @@ public final class OpcUaClientHelper {
         sb.append("根节点 ").append(interfaceNodeId).append(" 子节点 ").append(refs.size()).append(" 个");
         sb.append("（Status / Value / DataType 同 UaExpert）:\n");
         appendReferenceDetails(sb, refs, "[loadMap]");
-        logDocumentNodeCheck();
         return sb.toString().trim();
-    }
-
-    /** 对照文档 BrowseName，输出映射是否命中（便于复制 Logcat 排查快捷按钮）。 */
-    public synchronized void logDocumentNodeCheck() {
-        Log.i(LOG_TAG, "[docCheck] === 文档 BrowseName 对照 ===");
-        checkDocNode(DrumPotOpcNodes.START);
-        checkDocNode(DrumPotOpcNodes.STOP);
-        checkDocNode(DrumPotOpcNodes.RESET);
-        checkDocNode(DrumPotOpcNodes.POT_POSITION);
-        checkDocNode(DrumPotOpcNodes.POT_POSITION_START);
-        checkDocNode(DrumPotOpcNodes.POT_POSITION_RUNNING);
-        checkDocNode(DrumPotOpcNodes.WASH_START);
-        checkDocNode(DrumPotOpcNodes.WASHING);
-        checkDocNode(DrumPotOpcNodes.ROTATE_SPEED_GEAR);
-        checkDocNode(DrumPotOpcNodes.ROTATE_START);
-        checkDocNode(DrumPotOpcNodes.ROTATE_STOP);
-        checkDocNode(DrumPotOpcNodes.MOTOR_DIRECTION);
-        checkDocNode(DrumPotOpcNodes.AUTO_RUNNING);
-        checkDocNode(DrumPotOpcNodes.AXIS_CURRENT_POSITION);
-        checkDocNode(DrumPotOpcNodes.HEAT_GEAR);
-        checkDocNode(DrumPotOpcNodes.HEAT_START);
-        checkDocNode(DrumPotOpcNodes.HEAT_STOP);
-        checkDocNode(DrumPotOpcNodes.LIQUID_WEIGHT);
-        checkDocNode(DrumPotOpcNodes.LIQUID_SELECT);
-        checkDocNode(DrumPotOpcNodes.LIQUID_START);
-        checkDocNode(DrumPotOpcNodes.LIQUID1_TIMER);
-        checkDocNode(DrumPotOpcNodes.SOLID_TIME);
-        checkDocNode(DrumPotOpcNodes.SOLID_SELECT);
-        checkDocNode(DrumPotOpcNodes.SOLID_START);
-        checkDocNode(DrumPotOpcNodes.SOLID1_TIMER);
-        checkDocNode(DrumPotOpcNodes.EXHAUST_ON);
-        checkDocNode(DrumPotOpcNodes.EXHAUST_OFF);
-        Log.i(LOG_TAG, "[docCheck] === 对照结束 ===");
-    }
-
-    private void checkDocNode(String browseName) {
-        String mapped = browseNameToNodeId.get(browseName);
-        if (mapped != null) {
-            Log.i(LOG_TAG, "[docCheck]   OK  " + browseName + " -> " + mapped);
-        } else {
-            Log.w(LOG_TAG, "[docCheck]   MISS " + browseName + " (PLC 中无此 BrowseName，快捷按钮可能无效)");
-        }
     }
 
     public synchronized String resolveNodeId(String browseName, int fallbackNamespace) {
         String mapped = browseNameToNodeId.get(browseName);
         if (mapped != null) {
-            Log.d(LOG_TAG, "[resolve] " + browseName + " -> " + mapped + " (mapped)");
+            Log.d(LOG_TAG, "[resolve] " + browseName + " -> " + mapped);
             return mapped;
         }
-        String fallback = toNodeId(fallbackNamespace, browseName);
-        Log.w(LOG_TAG, "[resolve] " + browseName + " -> " + fallback + " (fallback, 未加载映射)");
-        return fallback;
+        throw new IllegalStateException(
+                "PLC 中无 BrowseName「" + browseName + "」，请先 loadInterfaceNodeMap");
     }
 
-    public synchronized boolean isConnected() {
-        return client != null;
+    /** 非阻塞，供 UI 轮询；勿在连接/浏览等长耗时 synchronized 方法持锁时调用。 */
+    public boolean isConnected() {
+        return sessionConnected;
     }
 
     public synchronized String browse(String nodeIdText) throws Exception {
         ensureConnected();
-        String target = (nodeIdText == null || nodeIdText.trim().isEmpty()) ? "ObjectsFolder" : nodeIdText.trim();
+        String target = (nodeIdText == null || nodeIdText.trim().isEmpty())
+                ? "ObjectsFolder" : nodeIdText.trim();
         Log.i(LOG_TAG, "[browse] target=" + target);
 
         NodeId nodeId = parseNodeId(nodeIdText, Identifiers.ObjectsFolder);
@@ -267,16 +242,6 @@ public final class OpcUaClientHelper {
         }
         Log.i(LOG_TAG, "[pulse] OK Boolean=true -> " + nodeIdText);
         return "pulse true -> " + nodeIdText;
-    }
-
-    public synchronized String movePotPosition(int namespaceIndex, int position) throws Exception {
-        Log.i(LOG_TAG, "[movePot] position=" + position + " ns=" + namespaceIndex);
-        String posNode = resolveNodeId(DrumPotOpcNodes.POT_POSITION, namespaceIndex);
-        String startNode = resolveNodeId(DrumPotOpcNodes.POT_POSITION_START, namespaceIndex);
-        write(posNode, String.valueOf(position));
-        pulseTrue(startNode);
-        String running = read(resolveNodeId(DrumPotOpcNodes.POT_POSITION_RUNNING, namespaceIndex));
-        return "锅点位=" + position + " pos=" + posNode + "\n" + running;
     }
 
     public static String toNodeId(int namespaceIndex, String browseName) {

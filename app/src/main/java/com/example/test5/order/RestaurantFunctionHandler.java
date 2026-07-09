@@ -4,8 +4,10 @@ package com.example.test5.order;
 
 import android.util.Log;
 
-import com.google.gson.Gson;
+import com.example.test5.order.mq.MqSettingsStore;
+import com.example.test5.recipe.DishsConfigStore;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 
@@ -72,6 +74,8 @@ public final class RestaurantFunctionHandler {
 
     private final DeviceFunctionHandler deviceHandler;
 
+    private final android.content.Context appContext;
+
     private CartListener cartListener;
 
     private SubmitListener submitListener;
@@ -79,6 +83,7 @@ public final class RestaurantFunctionHandler {
     private EndConversationListener endConversationListener;
 
     public RestaurantFunctionHandler(android.content.Context context) {
+        appContext = context.getApplicationContext();
         deviceHandler = new DeviceFunctionHandler(context);
     }
 
@@ -218,7 +223,7 @@ public final class RestaurantFunctionHandler {
 
         }
 
-        if (!MenuCatalog.isValidDish(dishName)) {
+        if (!DishsConfigStore.isValidDishName(appContext, dishName)) {
 
             return error("无效菜名: " + dishName);
 
@@ -240,7 +245,7 @@ public final class RestaurantFunctionHandler {
 
         }
 
-        if (!MenuCatalog.isValidDish(dishName)) {
+        if (!DishsConfigStore.isValidDishName(appContext, dishName)) {
 
             return error("无效菜名: " + dishName);
 
@@ -306,7 +311,7 @@ public final class RestaurantFunctionHandler {
 
                         StoreConfig.STORE_ID,
 
-                        StoreConfig.EQUIPMENT_NUM,
+                        MqSettingsStore.getEquipmentNum(appContext),
 
                         StoreConfig.STORE_NAME,
 

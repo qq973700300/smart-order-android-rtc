@@ -20,7 +20,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:paddingStart="@dimen/screen_content_padding_start"
+        android:paddingTop="@dimen/screen_content_padding_top"
+        android:paddingEnd="@dimen/screen_content_padding_end"
+        android:paddingBottom="@dimen/screen_content_padding_bottom"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <TextView

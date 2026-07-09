@@ -21,7 +21,11 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="16dp"
+        android:clipToPadding="false"
+        android:paddingStart="@dimen/screen_content_padding_start"
+        android:paddingTop="@dimen/screen_content_padding_top"
+        android:paddingEnd="@dimen/screen_content_padding_end"
+        android:paddingBottom="@dimen/screen_content_padding_bottom"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout

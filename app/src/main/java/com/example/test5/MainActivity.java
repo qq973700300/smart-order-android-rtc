@@ -19,20 +19,27 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.test5.device.opcua.DrumPotConnectionManager;
+import com.example.test5.device.settings.DeviceSettingsStore;
 import com.example.test5.device.tashi.StockBinConnectionManager;
 import com.example.test5.net.NetworkDiagnostics;
+import com.example.test5.order.mq.OrderInbox;
+import com.example.test5.order.mq.OrderMqManager;
 import com.example.test5.ui.AiAvatarVisualizerView;
 import com.example.test5.update.AppUpdateManager;
 import com.example.test5.voice.VoiceHomeController;
 import com.example.test5.wake.WakeConfig;
 import com.example.test5.wake.WakeForegroundService;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 /** 顾客主页：AI 虚拟体 + 手动点餐 / 自定义菜单；右上角菜单含联系客服与设置。 */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OrderInbox.Listener {
 
     public static final String EXTRA_AUTO_START = "auto_start";
     public static final String EXTRA_WAKE_KEYWORD = "wake_keyword";
@@ -40,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String ADMIN_PASSWORD = "123456";
 
     private TextView statusView;
+    private TextView orderBannerView;
+    private MaterialCardView deviceStatusBanner;
+    private TextView deviceStatusText;
     private TextView subtitleUserView;
     private TextView subtitleBotView;
     private TextView subtitlePlaceholderView;
@@ -47,6 +57,12 @@ public class MainActivity extends AppCompatActivity {
     private VoiceHomeController voiceController;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService deviceStatusExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "HomeDeviceStatus");
+        t.setDaemon(true);
+        return t;
+    });
+    private boolean deviceStatusPolling;
     private boolean wakeServiceStarted;
     private boolean pendingAutoStart;
     private String pendingWakeKeyword = "";
@@ -77,6 +93,17 @@ public class MainActivity extends AppCompatActivity {
             });
 
     private final Runnable autoStartRunnable = this::ensureMicAndStartVoice;
+    private static final long DEVICE_STATUS_POLL_MS = 2_000L;
+    private final Runnable deviceStatusPoller = new Runnable() {
+        @Override
+        public void run() {
+            if (!deviceStatusPolling) {
+                return;
+            }
+            deviceStatusExecutor.execute(MainActivity.this::collectAndApplyDeviceStatus);
+            mainHandler.postDelayed(this, DEVICE_STATUS_POLL_MS);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +111,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         statusView = findViewById(R.id.home_status_text);
+        orderBannerView = findViewById(R.id.home_order_banner);
+        deviceStatusBanner = findViewById(R.id.home_device_status_banner);
+        deviceStatusText = findViewById(R.id.home_device_status_text);
         subtitleUserView = findViewById(R.id.home_subtitle_user);
         subtitleBotView = findViewById(R.id.home_subtitle_bot);
         subtitlePlaceholderView = findViewById(R.id.home_subtitle_placeholder);
@@ -135,10 +165,13 @@ public class MainActivity extends AppCompatActivity {
         manualOrderButton.setOnClickListener(v ->
                 startActivity(new Intent(this, ManualOrderActivity.class)));
         customMenuButton.setOnClickListener(v -> openCustomMenu());
+        orderBannerView.setOnClickListener(v ->
+                startActivity(new Intent(this, OrderInboxActivity.class)));
+        deviceStatusBanner.setOnClickListener(v -> showDeviceDisconnectedDialog());
         aiAvatarView.setOnClickListener(v -> onAiAvatarClicked());
 
         ensureWakePermissions();
-        NetworkDiagnostics.logSnapshot("main_onCreate");
+        deviceStatusExecutor.execute(() -> NetworkDiagnostics.logSnapshot("main_onCreate"));
         AppUpdateManager.checkAndPrompt(this, false);
         handleLaunchIntent(getIntent());
     }
@@ -148,6 +181,140 @@ public class MainActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleLaunchIntent(intent);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        OrderInbox.getInstance().addListener(this);
+        refreshOrderBanner();
+    }
+
+    @Override
+    protected void onStop() {
+        OrderInbox.getInstance().removeListener(this);
+        super.onStop();
+    }
+
+    @Override
+    public void onOrdersChanged() {
+        runOnUiThread(() -> {
+            refreshOrderBanner();
+            OrderInbox.Entry latest = OrderInbox.getInstance().latest();
+            if (latest != null && latest.status == OrderInbox.Status.RECEIVED) {
+                Toast.makeText(
+                        this,
+                        getString(R.string.order_new_toast, latest.dishName),
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        });
+    }
+
+    private void refreshOrderBanner() {
+        if (orderBannerView != null) {
+            orderBannerView.setText(getString(
+                    R.string.order_mq_banner_format,
+                    OrderMqManager.getInstance().getConnectionStatus()));
+        }
+    }
+
+    private void collectAndApplyDeviceStatus() {
+        if (isFinishing()) {
+            return;
+        }
+        boolean stockOk = StockBinConnectionManager.getInstance(this).isConnected();
+        boolean drumOk = DrumPotConnectionManager.getInstance(this).isReady();
+        String stockLine = stockOk
+                ? getString(R.string.home_device_stock_connected)
+                : getString(
+                        R.string.home_device_stock_disconnected,
+                        DeviceSettingsStore.getStockBinHost(this),
+                        DeviceSettingsStore.getStockBinPort(this));
+        String drumLine = drumOk
+                ? getString(R.string.home_device_drum_connected)
+                : getString(
+                        R.string.home_device_drum_disconnected,
+                        DeviceSettingsStore.getDrumPotHost(this),
+                        DeviceSettingsStore.getDrumPotPort(this));
+        mainHandler.post(() -> applyDeviceStatusBanner(stockOk, drumOk, stockLine, drumLine));
+    }
+
+    private void applyDeviceStatusBanner(
+            boolean stockOk,
+            boolean drumOk,
+            String stockLine,
+            String drumLine
+    ) {
+        if (deviceStatusBanner == null || deviceStatusText == null || isFinishing()) {
+            return;
+        }
+
+        if (stockOk && drumOk) {
+            deviceStatusText.setText(getString(R.string.home_device_all_connected));
+            deviceStatusText.setTextColor(ContextCompat.getColor(this, R.color.home_device_status_ok_text));
+            deviceStatusBanner.setCardBackgroundColor(
+                    ContextCompat.getColor(this, R.color.home_device_status_ok_bg));
+            deviceStatusBanner.setClickable(false);
+            deviceStatusBanner.setFocusable(false);
+        } else {
+            deviceStatusText.setText(stockLine + getString(R.string.home_device_status_separator) + drumLine);
+            deviceStatusText.setTextColor(ContextCompat.getColor(this, R.color.home_device_status_warn_text));
+            deviceStatusBanner.setCardBackgroundColor(
+                    ContextCompat.getColor(this, R.color.home_device_status_warn_bg));
+            deviceStatusBanner.setClickable(true);
+            deviceStatusBanner.setFocusable(true);
+        }
+        deviceStatusBanner.setVisibility(View.VISIBLE);
+    }
+
+    private void refreshDeviceStatusBanner() {
+        deviceStatusExecutor.execute(this::collectAndApplyDeviceStatus);
+    }
+
+    private void showDeviceDisconnectedDialog() {
+        deviceStatusExecutor.execute(() -> {
+            if (isFinishing()) {
+                return;
+            }
+            boolean stockOk = StockBinConnectionManager.getInstance(this).isConnected();
+            boolean drumOk = DrumPotConnectionManager.getInstance(this).isReady();
+            if (stockOk && drumOk) {
+                return;
+            }
+
+            String stockLine = stockOk
+                    ? getString(R.string.home_device_stock_connected)
+                    : getString(
+                            R.string.home_device_stock_disconnected,
+                            DeviceSettingsStore.getStockBinHost(this),
+                            DeviceSettingsStore.getStockBinPort(this));
+            String drumLine = drumOk
+                    ? getString(R.string.home_device_drum_connected)
+                    : getString(
+                            R.string.home_device_drum_disconnected,
+                            DeviceSettingsStore.getDrumPotHost(this),
+                            DeviceSettingsStore.getDrumPotPort(this));
+            mainHandler.post(() -> {
+                if (isFinishing()) {
+                    return;
+                }
+                MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.home_device_disconnected_dialog_title)
+                        .setMessage(getString(
+                                R.string.home_device_disconnected_dialog_message,
+                                stockLine + "\n" + drumLine));
+                if (!stockOk) {
+                    builder.setNeutralButton(R.string.home_device_open_stock_settings, (d, w) ->
+                            startActivity(new Intent(this, StockBinSettingsActivity.class)));
+                }
+                if (!drumOk) {
+                    builder.setPositiveButton(R.string.home_device_open_drum_settings, (d, w) ->
+                            startActivity(new Intent(this, DrumPotSettingsActivity.class)));
+                }
+                builder.setNegativeButton(android.R.string.cancel, null).show();
+            });
+        });
     }
 
     @Override
@@ -167,11 +334,25 @@ public class MainActivity extends AppCompatActivity {
         if (pendingAutoStart && !voiceController.isSessionRunning()) {
             scheduleAutoStart();
         }
+        refreshOrderBanner();
+        deviceStatusPolling = true;
+        mainHandler.removeCallbacks(deviceStatusPoller);
+        mainHandler.post(deviceStatusPoller);
+    }
+
+    @Override
+    protected void onPause() {
+        deviceStatusPolling = false;
+        mainHandler.removeCallbacks(deviceStatusPoller);
+        super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        deviceStatusPolling = false;
         mainHandler.removeCallbacks(autoStartRunnable);
+        mainHandler.removeCallbacks(deviceStatusPoller);
+        deviceStatusExecutor.shutdownNow();
         voiceController.release();
         super.onDestroy();
     }
@@ -243,6 +424,14 @@ public class MainActivity extends AppCompatActivity {
         menu.getMenuInflater().inflate(R.menu.main_settings_menu, menu.getMenu());
         menu.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
+            if (id == R.id.menu_order_inbox) {
+                startActivity(new Intent(this, OrderInboxActivity.class));
+                return true;
+            }
+            if (id == R.id.menu_mq_settings) {
+                startActivity(new Intent(this, MqSettingsActivity.class));
+                return true;
+            }
             if (id == R.id.menu_contact_service) {
                 showContactServiceDialog();
                 return true;

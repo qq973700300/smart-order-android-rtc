@@ -17,6 +17,24 @@
             android:layout_height="wrap_content"
             app:navigationIcon="@android:drawable/ic_menu_revert"
             app:title="@string/manual_order_title" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/screen_content_padding_start"
+            android:layout_marginEnd="@dimen/screen_content_padding_end"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/dishs_search_hint"
+            app:startIconDrawable="@android:drawable/ic_menu_search">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/manual_search_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -24,16 +42,21 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:padding="12dp"
+        android:paddingStart="@dimen/screen_content_padding_start"
+        android:paddingTop="@dimen/screen_content_padding_top"
+        android:paddingEnd="@dimen/screen_content_padding_end"
+        android:paddingBottom="@dimen/screen_content_padding_bottom"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/item_menu_dish_manual" />
+        tools:listitem="@layout/item_custom_menu_dish" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cart_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_margin="12dp"
+        android:layout_marginStart="@dimen/screen_content_padding_start"
+        android:layout_marginEnd="@dimen/screen_content_padding_end"
+        android:layout_marginBottom="12dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp">
 

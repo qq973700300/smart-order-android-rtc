@@ -3,28 +3,33 @@ package com.example.test5;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
 import com.example.test5.device.opcua.DrumPotOpcConfig;
-import com.example.test5.device.opcua.DrumPotOpcNodes;
+import com.example.test5.device.opcua.DrumPotOpcKnownNodes;
 import com.example.test5.device.opcua.OpcUaClientHelper;
 import com.example.test5.device.settings.DeviceSettingsStore;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * 滚筒锅 OPC UA 调试页（局域网直连，文档《十套滚桶锅OPC》BrowseName）。
- */
+/** 滚筒锅 OPC UA 调试页：浏览 服务器接口_1 后动态加载 PLC 变量网格。 */
 public class DrumPotOpcDebugActivity extends AppCompatActivity {
 
     private static final String TAG = OpcUaClientHelper.LOG_TAG;
+    private static final int NODES_PER_ROW = 5;
 
     private TextInputEditText endpointInput;
     private TextInputEditText namespaceInput;
@@ -32,12 +37,12 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
     private TextInputEditText nodeIdInput;
     private TextInputEditText valueInput;
     private TextView responseText;
+    private NestedScrollView scrollView;
     private MaterialButton connectButton;
     private MaterialButton disconnectButton;
+    private LinearLayout knownNodesContainer;
 
-    private int selectedPotPosition = DrumPotOpcConfig.POT_POS_COOK;
-    private int selectedRotateGear = 1;
-    private int selectedHeatGear = 1;
+    private List<DrumPotOpcKnownNodes.Entry> displayedEntries = Collections.emptyList();
 
     private final OpcUaClientHelper client = new OpcUaClientHelper();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -55,8 +60,10 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         nodeIdInput = findViewById(R.id.opc_node_id_input);
         valueInput = findViewById(R.id.opc_value_input);
         responseText = findViewById(R.id.opc_response_text);
+        scrollView = findViewById(R.id.opc_debug_scroll);
         connectButton = findViewById(R.id.opc_btn_connect);
         disconnectButton = findViewById(R.id.opc_btn_disconnect);
+        knownNodesContainer = findViewById(R.id.opc_known_nodes_container);
 
         toolbar.setNavigationOnClickListener(v -> finish());
         endpointInput.setText(DeviceSettingsStore.getDrumPotEndpointUrl(this));
@@ -67,50 +74,15 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
 
         connectButton.setOnClickListener(v -> connect());
         disconnectButton.setOnClickListener(v -> disconnect());
-        findViewById(R.id.opc_btn_browse_objects).setOnClickListener(v -> browse(""));
+        findViewById(R.id.opc_btn_browse_objects).setOnClickListener(v -> browseObjectsFolder());
         findViewById(R.id.opc_btn_browse_interface).setOnClickListener(v -> loadInterfaceNodes());
         findViewById(R.id.opc_btn_read).setOnClickListener(v -> readNode());
         findViewById(R.id.opc_btn_write).setOnClickListener(v -> writeNode());
         findViewById(R.id.opc_btn_pulse).setOnClickListener(v -> pulseNode());
-
-        findViewById(R.id.opc_chip_pos_feed).setOnClickListener(v ->
-                selectPotPosition(DrumPotOpcConfig.POT_POS_FEED));
-        findViewById(R.id.opc_chip_pos_cook).setOnClickListener(v ->
-                selectPotPosition(DrumPotOpcConfig.POT_POS_COOK));
-        findViewById(R.id.opc_chip_pos_serve).setOnClickListener(v ->
-                selectPotPosition(DrumPotOpcConfig.POT_POS_SERVE));
-        findViewById(R.id.opc_chip_pos_wash).setOnClickListener(v ->
-                selectPotPosition(DrumPotOpcConfig.POT_POS_WASH));
-        findViewById(R.id.opc_btn_move_pot).setOnClickListener(v -> movePotPosition());
-
-        findViewById(R.id.opc_btn_start).setOnClickListener(v -> pulse(DrumPotOpcNodes.START));
-        findViewById(R.id.opc_btn_stop).setOnClickListener(v -> pulse(DrumPotOpcNodes.STOP));
-        findViewById(R.id.opc_btn_reset).setOnClickListener(v -> pulse(DrumPotOpcNodes.RESET));
-
-        findViewById(R.id.opc_chip_rotate_gear_0).setOnClickListener(v -> selectRotateGear(0));
-        findViewById(R.id.opc_chip_rotate_gear_1).setOnClickListener(v -> selectRotateGear(1));
-        findViewById(R.id.opc_chip_rotate_gear_2).setOnClickListener(v -> selectRotateGear(2));
-        findViewById(R.id.opc_chip_rotate_gear_3).setOnClickListener(v -> selectRotateGear(3));
-        findViewById(R.id.opc_btn_set_rotate_gear).setOnClickListener(v -> setRotateGear());
-        findViewById(R.id.opc_btn_rotate_start).setOnClickListener(v -> pulse(DrumPotOpcNodes.ROTATE_START));
-        findViewById(R.id.opc_btn_rotate_stop).setOnClickListener(v -> pulse(DrumPotOpcNodes.ROTATE_STOP));
-
-        findViewById(R.id.opc_chip_heat_gear_0).setOnClickListener(v -> selectHeatGear(0));
-        findViewById(R.id.opc_chip_heat_gear_1).setOnClickListener(v -> selectHeatGear(1));
-        findViewById(R.id.opc_chip_heat_gear_2).setOnClickListener(v -> selectHeatGear(2));
-        findViewById(R.id.opc_chip_heat_gear_3).setOnClickListener(v -> selectHeatGear(3));
-        findViewById(R.id.opc_btn_set_heat_gear).setOnClickListener(v -> setHeatGear());
-        findViewById(R.id.opc_btn_heat_start).setOnClickListener(v -> pulse(DrumPotOpcNodes.HEAT_START));
-        findViewById(R.id.opc_btn_heat_stop).setOnClickListener(v -> pulse(DrumPotOpcNodes.HEAT_STOP));
-
-        findViewById(R.id.opc_btn_liquid_feed).setOnClickListener(v -> startLiquidFeed());
-        findViewById(R.id.opc_btn_solid_feed).setOnClickListener(v -> startSolidFeed());
-        findViewById(R.id.opc_btn_read_feed).setOnClickListener(v -> refreshFeedStatus());
-        findViewById(R.id.opc_btn_exhaust_on).setOnClickListener(v -> pulse(DrumPotOpcNodes.EXHAUST_ON));
-        findViewById(R.id.opc_btn_exhaust_off).setOnClickListener(v -> pulse(DrumPotOpcNodes.EXHAUST_OFF));
-        findViewById(R.id.opc_btn_refresh_status).setOnClickListener(v -> refreshStatus());
+        findViewById(R.id.opc_btn_read_all_nodes).setOnClickListener(v -> readAllKnownNodes());
         findViewById(R.id.opc_btn_clear_log).setOnClickListener(v -> clearLog());
 
+        showNodesPlaceholder();
         Log.i(TAG, "[ui] DrumPotOpcDebugActivity opened, endpoint="
                 + DrumPotOpcConfig.defaultEndpointUrl());
     }
@@ -120,6 +92,126 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         super.onDestroy();
         client.disconnect();
         executor.shutdownNow();
+    }
+
+    private void showNodesPlaceholder() {
+        knownNodesContainer.removeAllViews();
+        displayedEntries = Collections.emptyList();
+        TextView placeholder = new TextView(this);
+        placeholder.setText(R.string.drum_pot_opc_nodes_placeholder);
+        int paddingPx = (int) (12 * getResources().getDisplayMetrics().density);
+        placeholder.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+        placeholder.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+        knownNodesContainer.addView(placeholder);
+    }
+
+    private void bindKnownNodeCards(List<DrumPotOpcKnownNodes.Entry> entries) {
+        knownNodesContainer.removeAllViews();
+        displayedEntries = entries;
+        if (entries.isEmpty()) {
+            showNodesPlaceholder();
+            return;
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        float density = getResources().getDisplayMetrics().density;
+        int marginPx = (int) (3 * density);
+        LinearLayout currentRow = null;
+        int col = 0;
+
+        for (DrumPotOpcKnownNodes.Entry entry : entries) {
+            if (col == 0) {
+                currentRow = new LinearLayout(this);
+                currentRow.setOrientation(LinearLayout.HORIZONTAL);
+                LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                rowLp.bottomMargin = marginPx;
+                currentRow.setLayoutParams(rowLp);
+                knownNodesContainer.addView(currentRow);
+            }
+
+            View cell = inflater.inflate(R.layout.item_opc_known_node, currentRow, false);
+            LinearLayout.LayoutParams cellLp = new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f);
+            cellLp.setMargins(marginPx, marginPx, marginPx, marginPx);
+            cell.setLayoutParams(cellLp);
+            bindKnownNodeCell(cell, entry);
+            currentRow.addView(cell);
+
+            col++;
+            if (col >= NODES_PER_ROW) {
+                if (currentRow != null) {
+                    applyRowRightSafeInset(currentRow);
+                }
+                col = 0;
+            }
+        }
+
+        if (col != 0 && currentRow != null) {
+            for (int i = col; i < NODES_PER_ROW; i++) {
+                View spacer = new View(this);
+                spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 0, 1f));
+                spacer.setVisibility(View.INVISIBLE);
+                currentRow.addView(spacer);
+            }
+            applyRowRightSafeInset(currentRow);
+        }
+    }
+
+    /** 每行最右侧卡片与屏幕右缘留出滑动安全区，减少误触。 */
+    private void applyRowRightSafeInset(LinearLayout row) {
+        int childCount = row.getChildCount();
+        if (childCount <= 0) {
+            return;
+        }
+        View lastVisible = null;
+        for (int i = childCount - 1; i >= 0; i--) {
+            View child = row.getChildAt(i);
+            if (child.getVisibility() == View.VISIBLE) {
+                lastVisible = child;
+                break;
+            }
+        }
+        if (lastVisible == null) {
+            return;
+        }
+        int safeInsetPx = getResources().getDimensionPixelSize(R.dimen.opc_debug_row_safe_inset_end);
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) lastVisible.getLayoutParams();
+        lp.setMarginEnd(safeInsetPx);
+        lastVisible.setLayoutParams(lp);
+    }
+
+    private void bindKnownNodeCell(View row, DrumPotOpcKnownNodes.Entry entry) {
+        TextView labelView = row.findViewById(R.id.opc_node_label);
+        TextView nodeIdView = row.findViewById(R.id.opc_node_id_text);
+        MaterialButton readBtn = row.findViewById(R.id.opc_node_btn_read);
+        MaterialButton writeBtn = row.findViewById(R.id.opc_node_btn_write);
+        MaterialButton pulseBtn = row.findViewById(R.id.opc_node_btn_pulse);
+
+        labelView.setText(entry.label);
+        nodeIdView.setText(shortNodeId(entry.nodeId));
+
+        readBtn.setOnClickListener(v -> readKnownNode(entry));
+        if (entry.writable) {
+            writeBtn.setVisibility(View.VISIBLE);
+            writeBtn.setOnClickListener(v -> writeKnownNode(entry));
+        } else {
+            writeBtn.setVisibility(View.GONE);
+        }
+        if (entry.pulseable) {
+            pulseBtn.setVisibility(View.VISIBLE);
+            pulseBtn.setOnClickListener(v -> pulseKnownNode(entry));
+        } else {
+            pulseBtn.setVisibility(View.GONE);
+        }
+    }
+
+    private static String shortNodeId(String nodeId) {
+        int idx = nodeId.indexOf(";i=");
+        return idx >= 0 ? nodeId.substring(idx + 1) : nodeId;
     }
 
     private void connect() {
@@ -156,6 +248,7 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         Log.i(TAG, "[ui] disconnect click");
         client.disconnect();
         setConnectedUi(false);
+        showNodesPlaceholder();
         appendLog(getString(R.string.device_disconnected));
     }
 
@@ -168,10 +261,12 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 String result = client.loadInterfaceNodeMap(DrumPotOpcConfig.SERVER_INTERFACE_NODE_ID);
+                List<DrumPotOpcKnownNodes.Entry> entries = client.getInterfaceVariableEntries();
                 runOnUiThread(() -> {
                     appendLog(result);
-                    appendLog(getString(R.string.drum_pot_opc_node_map_loaded));
-                    Log.i(TAG, "[ui] loadInterfaceNodes success");
+                    appendLog(getString(R.string.drum_pot_opc_node_map_loaded, entries.size()));
+                    bindKnownNodeCards(entries);
+                    Log.i(TAG, "[ui] loadInterfaceNodes success, variables=" + entries.size());
                     setBusy(false);
                 });
             } catch (Exception e) {
@@ -184,6 +279,30 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         });
     }
 
+    private void browseObjectsFolder() {
+        if (!ensureConnected()) {
+            return;
+        }
+        Log.i(TAG, "[ui] browse ObjectsFolder click");
+        setBusy(true);
+        executor.execute(() -> {
+            try {
+                String result = client.browse(null);
+                runOnUiThread(() -> {
+                    appendLog("browse ObjectsFolder (ns=0;i=85):\n" + result);
+                    setBusy(false);
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "[ui] browse ObjectsFolder failed", e);
+                runOnUiThread(() -> {
+                    appendLog(getString(R.string.device_error_network, e.getMessage()));
+                    setBusy(false);
+                });
+            }
+        });
+    }
+
+    /** 浏览输入框指定 NodeId（留空则 ObjectsFolder）。 */
     private void browse(String nodeId) {
         if (!ensureConnected()) {
             return;
@@ -245,107 +364,51 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         runTask(() -> appendLog(client.pulseTrue(nodeId)));
     }
 
-    private void pulse(String browseName) {
+    private void readKnownNode(DrumPotOpcKnownNodes.Entry entry) {
         if (!ensureConnected()) {
             return;
         }
-        if (!client.hasNodeMap()) {
-            toast(R.string.drum_pot_opc_load_map_first);
-            return;
-        }
-        String nodeId = resolveNodeId(browseName);
-        Log.i(TAG, "[ui] pulse click browseName=" + browseName + " nodeId=" + nodeId);
-        runTask(() -> appendLog(browseName + " (" + nodeId + "): " + client.pulseTrue(nodeId)));
+        nodeIdInput.setText(entry.nodeId);
+        runTask(() -> appendLog(entry.label + " read: " + client.read(entry.nodeId)));
     }
 
-    private void movePotPosition() {
+    private void writeKnownNode(DrumPotOpcKnownNodes.Entry entry) {
         if (!ensureConnected()) {
             return;
         }
-        if (!client.hasNodeMap()) {
-            toast(R.string.drum_pot_opc_load_map_first);
+        String value = textOf(valueInput);
+        if (TextUtils.isEmpty(value)) {
+            toast(R.string.drum_pot_opc_error_value);
             return;
         }
-        int ns = parseNamespace();
-        if (ns < 0) {
-            return;
-        }
-        Log.i(TAG, "[ui] movePot click position=" + selectedPotPosition);
-        runTask(() -> appendLog(client.movePotPosition(ns, selectedPotPosition)));
+        nodeIdInput.setText(entry.nodeId);
+        runTask(() -> appendLog(entry.label + " write " + value + ": "
+                + client.write(entry.nodeId, value)));
     }
 
-    private void setRotateGear() {
-        if (!ensureConnected() || !ensureNodeMap()) {
-            return;
-        }
-        Log.i(TAG, "[ui] setRotateGear click gear=" + selectedRotateGear);
-        runTask(() -> appendLog(client.write(
-                resolveNodeId(DrumPotOpcNodes.ROTATE_SPEED_GEAR),
-                String.valueOf(selectedRotateGear))));
-    }
-
-    private void setHeatGear() {
-        if (!ensureConnected() || !ensureNodeMap()) {
-            return;
-        }
-        Log.i(TAG, "[ui] setHeatGear click gear=" + selectedHeatGear);
-        runTask(() -> appendLog(client.write(
-                resolveNodeId(DrumPotOpcNodes.HEAT_GEAR),
-                String.valueOf(selectedHeatGear))));
-    }
-
-    private void refreshStatus() {
+    private void pulseKnownNode(DrumPotOpcKnownNodes.Entry entry) {
         if (!ensureConnected()) {
             return;
         }
-        if (!client.hasNodeMap()) {
+        nodeIdInput.setText(entry.nodeId);
+        runTask(() -> appendLog(entry.label + " pulse: " + client.pulseTrue(entry.nodeId)));
+    }
+
+    private void readAllKnownNodes() {
+        if (!ensureConnected()) {
+            return;
+        }
+        if (displayedEntries.isEmpty()) {
             toast(R.string.drum_pot_opc_load_map_first);
             return;
         }
-        Log.i(TAG, "[ui] refreshStatus click");
         runTask(() -> {
-            appendLog("--- 运行状态 ---");
-            readStatus(DrumPotOpcNodes.AUTO_RUNNING);
-            readStatus(DrumPotOpcNodes.POT_POSITION);
-            readStatus(DrumPotOpcNodes.POT_POSITION_RUNNING);
-            readStatus(DrumPotOpcNodes.WASHING);
-            readStatus(DrumPotOpcNodes.HEAT_GEAR);
-            readStatus(DrumPotOpcNodes.ROTATE_SPEED_GEAR);
-            readStatus(DrumPotOpcNodes.ROTATE_START);
-            readStatus(DrumPotOpcNodes.ROTATE_STOP);
-            readStatus(DrumPotOpcNodes.HEAT_START);
-            readStatus(DrumPotOpcNodes.HEAT_STOP);
-            readStatus(DrumPotOpcNodes.AXIS_CURRENT_POSITION);
-            readStatus(DrumPotOpcNodes.WASH_TIME);
-            readStatus(DrumPotOpcNodes.BLOW_TIME);
-            appendLog("--- 状态结束 ---");
+            appendLog("--- 读取全部 PLC 变量 ---");
+            for (DrumPotOpcKnownNodes.Entry entry : displayedEntries) {
+                appendLog(entry.label + " (" + entry.nodeId + "): " + client.read(entry.nodeId));
+            }
+            appendLog("--- 读取结束 ---");
         });
-    }
-
-    private void readStatus(String browseName) throws Exception {
-        String nodeId = resolveNodeId(browseName);
-        appendLog(browseName + ": " + client.read(nodeId));
-    }
-
-    private void selectPotPosition(int position) {
-        selectedPotPosition = position;
-        valueInput.setText(String.valueOf(position));
-        Log.i(TAG, "[ui] selectPotPosition=" + position);
-        appendLog(getString(R.string.drum_pot_opc_selected_pos, position));
-    }
-
-    private void selectRotateGear(int gear) {
-        selectedRotateGear = gear;
-        valueInput.setText(String.valueOf(gear));
-        Log.i(TAG, "[ui] selectRotateGear=" + gear);
-        appendLog(getString(R.string.drum_pot_opc_selected_rotate_gear, gear));
-    }
-
-    private void selectHeatGear(int gear) {
-        selectedHeatGear = gear;
-        valueInput.setText(String.valueOf(gear));
-        Log.i(TAG, "[ui] selectHeatGear=" + gear);
-        appendLog(getString(R.string.drum_pot_opc_selected_heat_gear, gear));
     }
 
     private void runTask(OpcTask task) {
@@ -362,122 +425,8 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
         });
     }
 
-    /** 液体1：选择1号通道，定时500ms，再脉冲启动（若存在重量节点则写10g小量）。 */
-    private void startLiquidFeed() {
-        if (!ensureConnected() || !ensureNodeMap()) {
-            return;
-        }
-        Log.i(TAG, "[ui] startLiquidFeed click");
-        runTask(() -> {
-            appendLog("--- 液体投料(小量) ---");
-            if (client.hasBrowseName(DrumPotOpcNodes.LIQUID_WEIGHT)) {
-                appendLog(client.write(
-                        resolveNodeId(DrumPotOpcNodes.LIQUID_WEIGHT),
-                        String.valueOf(DrumPotOpcConfig.FEED_LIQUID_WEIGHT)));
-            }
-            appendLog(client.write(
-                    resolveNodeId(DrumPotOpcNodes.LIQUID_SELECT),
-                    String.valueOf(DrumPotOpcConfig.FEED_LIQUID_CHANNEL)));
-            if (client.hasBrowseName(DrumPotOpcNodes.LIQUID1_TIMER)) {
-                appendLog(client.write(
-                        resolveNodeId(DrumPotOpcNodes.LIQUID1_TIMER),
-                        String.valueOf(DrumPotOpcConfig.FEED_LIQUID1_TIME)));
-            }
-            appendLog(client.pulseTrue(resolveNodeId(DrumPotOpcNodes.LIQUID_START)));
-            appendLog("--- 液体投料指令已发 ---");
-        });
-    }
-
-    /** 固体1：选择通道 + 固1定时时间(DINT) + 脉冲启动（不写「固体投料时间」避免重复）。 */
-    private void startSolidFeed() {
-        if (!ensureConnected() || !ensureNodeMap()) {
-            return;
-        }
-        Log.i(TAG, "[ui] startSolidFeed click");
-        runTask(() -> {
-            appendLog("--- 固体投料(小量) ---");
-            appendLog(client.write(
-                    resolveNodeId(DrumPotOpcNodes.SOLID_SELECT),
-                    String.valueOf(DrumPotOpcConfig.FEED_SOLID_CHANNEL)));
-            if (client.hasBrowseName(DrumPotOpcNodes.SOLID1_TIMER)) {
-                appendLog(client.write(
-                        resolveNodeId(DrumPotOpcNodes.SOLID1_TIMER),
-                        String.valueOf(DrumPotOpcConfig.FEED_SOLID_TIME)));
-            } else if (client.hasBrowseName(DrumPotOpcNodes.SOLID_TIME)) {
-                appendLog(client.write(
-                        resolveNodeId(DrumPotOpcNodes.SOLID_TIME),
-                        String.valueOf(DrumPotOpcConfig.FEED_SOLID_TIME)));
-            }
-            appendLog(client.pulseTrue(resolveNodeId(DrumPotOpcNodes.SOLID_START)));
-            appendLog("--- 固体投料指令已发 ---");
-        });
-    }
-
-    private void refreshFeedStatus() {
-        if (!ensureConnected() || !ensureNodeMap()) {
-            return;
-        }
-        Log.i(TAG, "[ui] refreshFeedStatus click");
-        runTask(() -> {
-            appendLog("--- 投料参数 ---");
-            readStatusIfMapped(DrumPotOpcNodes.LIQUID_SELECT);
-            readStatusIfMapped(DrumPotOpcNodes.LIQUID_WEIGHT);
-            readStatusIfMapped(DrumPotOpcNodes.LIQUID1_TIMER);
-            readStatusIfMapped(DrumPotOpcNodes.LIQUID_START);
-            readStatusIfMapped(DrumPotOpcNodes.SOLID_SELECT);
-            readStatusIfMapped(DrumPotOpcNodes.SOLID_TIME);
-            readStatusIfMapped(DrumPotOpcNodes.SOLID1_TIMER);
-            readStatusIfMapped(DrumPotOpcNodes.SOLID_START);
-            appendLog("--- 投料参数结束 ---");
-        });
-    }
-
-    private void readStatusIfMapped(String browseName) throws Exception {
-        if (client.hasBrowseName(browseName)) {
-            readStatus(browseName);
-        }
-    }
-
-    private boolean ensureNodeMap() {
-        if (client.hasNodeMap()) {
-            return true;
-        }
-        toast(R.string.drum_pot_opc_load_map_first);
-        return false;
-    }
-
     private interface OpcTask {
         void run() throws Exception;
-    }
-
-    private String resolveNodeId(String browseName) {
-        int ns = parseNamespace();
-        if (ns < 0) {
-            ns = DrumPotOpcConfig.DEFAULT_NAMESPACE_INDEX;
-        }
-        return client.resolveNodeId(browseName, ns);
-    }
-
-    private String nodeId(String browseName) {
-        return resolveNodeId(browseName);
-    }
-
-    private int parseNamespace() {
-        String raw = textOf(namespaceInput);
-        if (TextUtils.isEmpty(raw)) {
-            return DrumPotOpcConfig.DEFAULT_NAMESPACE_INDEX;
-        }
-        try {
-            int ns = Integer.parseInt(raw.trim());
-            if (ns < 0 || ns > 65535) {
-                toast(R.string.drum_pot_opc_error_namespace);
-                return -1;
-            }
-            return ns;
-        } catch (NumberFormatException e) {
-            toast(R.string.drum_pot_opc_error_namespace);
-            return -1;
-        }
     }
 
     private boolean ensureConnected() {
@@ -500,11 +449,16 @@ public class DrumPotOpcDebugActivity extends AppCompatActivity {
 
     private void appendLog(String line) {
         Log.i(TAG, "[screen] " + line);
-        if (logBuilder.length() > 0) {
-            logBuilder.append('\n');
-        }
-        logBuilder.append(line);
-        responseText.setText(logBuilder.toString());
+        runOnUiThread(() -> {
+            if (logBuilder.length() > 0) {
+                logBuilder.append('\n');
+            }
+            logBuilder.append(line);
+            responseText.setText(logBuilder.toString());
+            if (scrollView != null) {
+                scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        });
     }
 
     private void clearLog() {

@@ -79,6 +79,19 @@ public final class DishsConfigStore {
         return null;
     }
 
+    public static synchronized boolean isValidDishName(Context context, String dishName) {
+        ensureLoaded(context);
+        if (dishName == null || dishName.isEmpty()) {
+            return false;
+        }
+        for (DishsConfig item : cache) {
+            if (dishName.equals(item.dishName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static synchronized void add(Context context, DishsConfig config) {
         ensureLoaded(context);
         DishsConfig item = config.copy();

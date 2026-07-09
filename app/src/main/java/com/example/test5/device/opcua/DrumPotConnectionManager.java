@@ -78,6 +78,96 @@ public final class DrumPotConnectionManager {
         }
     }
 
+    /** 写出料时间并脉冲启动（与上位机 SetIncorporatingMaterials 一致）。 */
+    public DrumPotVoiceController.Result dischargeMaterial(
+            String timeBrowseName,
+            String startBrowseName,
+            int amountMs,
+            String label
+    ) {
+        if (amountMs <= 0) {
+            return DrumPotVoiceController.Result.ok("跳过" + label);
+        }
+        synchronized (this) {
+            try {
+                return dischargeMaterialLocked(timeBrowseName, startBrowseName, amountMs, label);
+            } catch (Exception e) {
+                Log.e(TAG, "discharge failed " + label + ", retry once", e);
+                disconnectInternal();
+                try {
+                    connectInternal();
+                    return dischargeMaterialLocked(timeBrowseName, startBrowseName, amountMs, label);
+                } catch (Exception retryEx) {
+                    return DrumPotVoiceController.Result.fail(label + "失败: " + retryEx.getMessage());
+                }
+            }
+        }
+    }
+
+    public DrumPotVoiceController.Result heatStart(int gear) {
+        int heatGear = Math.max(0, Math.min(3, gear));
+        synchronized (this) {
+            try {
+                return heatStartLocked(heatGear);
+            } catch (Exception e) {
+                Log.e(TAG, "heatStart failed, retry once", e);
+                disconnectInternal();
+                try {
+                    connectInternal();
+                    return heatStartLocked(heatGear);
+                } catch (Exception retryEx) {
+                    return DrumPotVoiceController.Result.fail("加热启动失败: " + retryEx.getMessage());
+                }
+            }
+        }
+    }
+
+    public DrumPotVoiceController.Result heatStop() {
+        synchronized (this) {
+            try {
+                return heatStopLocked();
+            } catch (Exception e) {
+                Log.e(TAG, "heatStop failed, retry once", e);
+                disconnectInternal();
+                try {
+                    connectInternal();
+                    return heatStopLocked();
+                } catch (Exception retryEx) {
+                    return DrumPotVoiceController.Result.fail("加热停止失败: " + retryEx.getMessage());
+                }
+            }
+        }
+    }
+
+    private DrumPotVoiceController.Result dischargeMaterialLocked(
+            String timeBrowseName,
+            String startBrowseName,
+            int amountMs,
+            String label
+    ) throws Exception {
+        ensureReadyLocked();
+        int namespace = DrumPotOpcConfig.DEFAULT_NAMESPACE_INDEX;
+        client.write(resolve(timeBrowseName, namespace), String.valueOf(amountMs));
+        client.pulseTrue(resolve(startBrowseName, namespace));
+        Thread.sleep(amountMs);
+        return DrumPotVoiceController.Result.ok(label + " " + amountMs + "ms");
+    }
+
+    private DrumPotVoiceController.Result heatStartLocked(int gear) throws Exception {
+        ensureReadyLocked();
+        int namespace = DrumPotOpcConfig.DEFAULT_NAMESPACE_INDEX;
+        client.write(resolve("加热档位", namespace), String.valueOf(gear));
+        client.pulseTrue(resolve("加热启动", namespace));
+        return DrumPotVoiceController.Result.ok("加热已启动，档位 " + gear);
+    }
+
+    private DrumPotVoiceController.Result heatStopLocked() throws Exception {
+        ensureReadyLocked();
+        int namespace = DrumPotOpcConfig.DEFAULT_NAMESPACE_INDEX;
+        client.pulseTrue(resolve("加热停止", namespace));
+        return DrumPotVoiceController.Result.ok("加热已停止");
+    }
+
     private DrumPotVoiceController.Result controlLocked(DrumPotVoiceController.Action action, int rotateGear)
             throws Exception {
         ensureReadyLocked();
@@ -85,21 +175,21 @@ public final class DrumPotConnectionManager {
         long t0 = System.currentTimeMillis();
         switch (action) {
             case START:
-                client.pulseTrue(resolve(DrumPotOpcNodes.START, namespace));
+                client.pulseTrue(resolve("启动", namespace));
                 return ok("滚筒已启动", action, t0);
             case STOP:
-                client.pulseTrue(resolve(DrumPotOpcNodes.STOP, namespace));
+                client.pulseTrue(resolve("停止", namespace));
                 return ok("滚筒已停止", action, t0);
             case RESET:
-                client.pulseTrue(resolve(DrumPotOpcNodes.RESET, namespace));
+                client.pulseTrue(resolve("复位", namespace));
                 return ok("滚筒已复位", action, t0);
             case ROTATE_START:
-                client.write(resolve(DrumPotOpcNodes.ROTATE_SPEED_GEAR, namespace),
+                client.write(resolve("转速控制档位", namespace),
                         String.valueOf(rotateGear));
-                client.pulseTrue(resolve(DrumPotOpcNodes.ROTATE_START, namespace));
+                client.pulseTrue(resolve("锅旋转启动", namespace));
                 return ok("滚筒已开始旋转，档位 " + rotateGear, action, t0);
             case ROTATE_STOP:
-                client.pulseTrue(resolve(DrumPotOpcNodes.ROTATE_STOP, namespace));
+                client.pulseTrue(resolve("锅旋转停止", namespace));
                 return ok("滚筒旋转已停止", action, t0);
             default:
                 return DrumPotVoiceController.Result.fail("未知滚筒动作");

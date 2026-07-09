@@ -1,74 +1,74 @@
 package com.example.test5;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.test5.order.OrderCart;
-import com.example.test5.order.OrderSubmitDialogs;
-import com.example.test5.order.RestaurantFunctionHandler;
-import com.example.test5.recipe.CustomMenuAdapter;
 import com.example.test5.recipe.DishsConfig;
+import com.example.test5.recipe.DishsConfigManageAdapter;
 import com.example.test5.recipe.DishsConfigStore;
+import com.example.test5.recipe.flow.RecipeFlowStore;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** 自定义菜单：从 DishsConfig.xml 加载菜谱，加入购物车送厨。 */
+/** 自定义菜谱：添加/修改均进入流程编排界面。 */
 public class CustomMenuActivity extends AppCompatActivity {
 
-    private OrderCart cart;
-    private CustomMenuAdapter adapter;
-    private TextView cartSummaryView;
-    private MaterialButton checkoutButton;
-    private RestaurantFunctionHandler orderHandler;
-    private final List<DishsConfig> displayItems = new ArrayList<>();
+    private DishsConfigManageAdapter adapter;
+    private TextView countView;
+    private TextInputEditText searchInput;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    private final ActivityResultLauncher<Intent> editLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                reloadList(currentKeyword());
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_custom_menu);
-        orderHandler = new RestaurantFunctionHandler(this);
+        setContentView(R.layout.activity_dishs_config_manage);
 
-        MaterialToolbar toolbar = findViewById(R.id.custom_menu_toolbar);
-        RecyclerView recycler = findViewById(R.id.custom_menu_recycler);
-        TextInputEditText searchInput = findViewById(R.id.custom_menu_search_input);
-        cartSummaryView = findViewById(R.id.cart_summary_text);
-        checkoutButton = findViewById(R.id.checkout_button);
+        MaterialToolbar toolbar = findViewById(R.id.dishs_manage_toolbar);
+        searchInput = findViewById(R.id.dishs_search_input);
+        countView = findViewById(R.id.dishs_count_text);
+        RecyclerView recycler = findViewById(R.id.dishs_manage_recycler);
+        MaterialButton addButton = findViewById(R.id.dishs_add_button);
+        MaterialButton editButton = findViewById(R.id.dishs_edit_button);
+        MaterialButton deleteButton = findViewById(R.id.dishs_delete_button);
 
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        cart = OrderCart.getInstance();
-        orderHandler.setSubmitListener((success, message, summary) -> runOnUiThread(() -> {
-            updateCartSummary();
-            if (adapter != null) {
-                adapter.refreshAll();
-            }
-            OrderSubmitDialogs.show(this, success, message, summary);
-        }));
-
-        adapter = new CustomMenuAdapter(displayItems, cart, this::updateCartSummary);
-        recycler.setLayoutManager(new GridLayoutManager(this, 2));
+        adapter = new DishsConfigManageAdapter(this, item -> {
+        });
+        recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setAdapter(adapter);
-        int bottomPad = (int) (96 * getResources().getDisplayMetrics().density);
-        recycler.setPadding(0, 0, 0, bottomPad);
-        recycler.setClipToPadding(false);
 
-        checkoutButton.setOnClickListener(v -> submitOrder());
+        addButton.setOnClickListener(v -> openFlowEdit(null));
+        editButton.setOnClickListener(v -> {
+            DishsConfig selected = adapter.getSelectedItem();
+            if (selected == null) {
+                Toast.makeText(this, R.string.dishs_select_first, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            openFlowEdit(selected.id);
+        });
+        deleteButton.setOnClickListener(v -> confirmDelete());
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -81,115 +81,62 @@ public class CustomMenuActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                loadDishes(s != null ? s.toString() : "");
+                reloadList(s != null ? s.toString() : "");
             }
         });
 
-        loadDishes("");
-        updateCartSummary();
+        reloadList("");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        cart.setChangeListener(this::updateCartSummaryFromCart);
-        updateCartSummary();
-    }
-
-    @Override
-    protected void onPause() {
-        cart.setChangeListener(null);
-        super.onPause();
+        reloadList(currentKeyword());
     }
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-        orderHandler.shutdown();
         executor.shutdownNow();
+        super.onDestroy();
     }
 
-    private void loadDishes(String keyword) {
+    private void openFlowEdit(String id) {
+        Intent intent = new Intent(this, FlowRecipeEditActivity.class);
+        if (id != null) {
+            intent.putExtra(FlowRecipeEditActivity.EXTRA_RECIPE_ID, id);
+        }
+        editLauncher.launch(intent);
+    }
+
+    private void confirmDelete() {
+        DishsConfig selected = adapter.getSelectedItem();
+        if (selected == null) {
+            Toast.makeText(this, R.string.dishs_select_first, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.dishs_delete)
+                .setMessage(getString(R.string.dishs_delete_confirm, selected.dishName))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.dishs_delete, (d, w) -> executor.execute(() -> {
+                    DishsConfigStore.delete(this, selected.id);
+                    RecipeFlowStore.delete(this, selected.id);
+                    runOnUiThread(() -> reloadList(currentKeyword()));
+                }))
+                .show();
+    }
+
+    private String currentKeyword() {
+        return searchInput.getText() != null ? searchInput.getText().toString() : "";
+    }
+
+    private void reloadList(String keyword) {
         executor.execute(() -> {
             List<DishsConfig> list = DishsConfigStore.search(this, keyword);
             runOnUiThread(() -> {
-                displayItems.clear();
-                displayItems.addAll(list);
-                adapter.setItems(displayItems);
+                adapter.setItems(list);
+                countView.setText(getString(R.string.dishs_count_format, list.size()));
             });
         });
-    }
-
-    private void submitOrder() {
-        if (cart.countActive() == 0) {
-            Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        checkoutButton.setEnabled(false);
-        checkoutButton.setText(R.string.order_subscribe_requesting);
-        executor.execute(() -> {
-            String result = orderHandler.execute(
-                    RestaurantFunctionHandler.TOOL_SUBMIT_ORDER,
-                    "{}"
-            );
-            boolean success = isSuccess(result);
-            if (!success) {
-                String message = extractMessage(result);
-                runOnUiThread(() -> {
-                    checkoutButton.setEnabled(cart.countActive() > 0);
-                    updateCartSummary();
-                    OrderSubmitDialogs.show(this, false, message, "");
-                });
-            } else {
-                runOnUiThread(() -> {
-                    checkoutButton.setEnabled(cart.countActive() > 0);
-                    updateCartSummary();
-                });
-            }
-        });
-    }
-
-    private void updateCartSummaryFromCart(String cartText) {
-        runOnUiThread(() -> updateCartSummary(cartText));
-    }
-
-    private void updateCartSummary() {
-        updateCartSummary(cart.buildCartText());
-    }
-
-    private void updateCartSummary(String cartText) {
-        int total = cart.countActive();
-        if (total == 0) {
-            cartSummaryView.setText(R.string.cart_empty);
-            checkoutButton.setEnabled(false);
-            checkoutButton.setText(R.string.checkout);
-        } else {
-            cartSummaryView.setText(cartText);
-            checkoutButton.setEnabled(true);
-            checkoutButton.setText(getString(R.string.checkout_with_count, total));
-        }
-        if (adapter != null) {
-            adapter.refreshAll();
-        }
-    }
-
-    private static boolean isSuccess(String json) {
-        try {
-            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-            return root.has("ok") && root.get("ok").getAsBoolean();
-        } catch (Exception ignored) {
-        }
-        return false;
-    }
-
-    private static String extractMessage(String json) {
-        try {
-            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
-            if (root.has("message")) {
-                return root.get("message").getAsString();
-            }
-        } catch (Exception ignored) {
-        }
-        return json;
     }
 }

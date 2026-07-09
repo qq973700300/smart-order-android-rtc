@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="menu_card_stroke_selected">2dp</dimen>
+
+    <!-- 横屏内容区边距（除首页外各界面统一，右侧留滑动安全区） -->
+    <dimen name="screen_content_padding_start">12dp</dimen>
+    <dimen name="screen_content_padding_end">88dp</dimen>
+    <dimen name="screen_content_padding_top">16dp</dimen>
+    <dimen name="screen_content_padding_bottom">16dp</dimen>
+
+    <!-- OPC 节点网格：每行最右卡片额外内缩 -->
+    <dimen name="opc_debug_row_safe_inset_end">12dp</dimen>
+
+    <!-- 菜谱编辑紧凑网格 -->
+    <dimen name="dishs_edit_field_gap">6dp</dimen>
+    <dimen name="dishs_edit_row_gap">10dp</dimen>
 </resources>

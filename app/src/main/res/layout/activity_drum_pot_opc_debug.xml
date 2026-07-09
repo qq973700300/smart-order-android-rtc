@@ -19,15 +19,23 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/opc_debug_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="16dp"
+        android:clipToPadding="false"
+        android:paddingStart="@dimen/screen_content_padding_start"
+        android:paddingTop="@dimen/screen_content_padding_top"
+        android:paddingEnd="@dimen/screen_content_padding_end"
+        android:paddingBottom="@dimen/screen_content_padding_bottom"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -202,362 +210,65 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="@string/drum_pot_opc_quick_label"
+                android:text="@string/drum_pot_opc_known_nodes_label"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
 
-            <com.google.android.material.chip.ChipGroup
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_pos_feed"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_pos_feed" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_pos_cook"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_pos_cook" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_pos_serve"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_pos_serve" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_pos_wash"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_pos_wash" />
-            </com.google.android.material.chip.ChipGroup>
+                android:layout_marginTop="4dp"
+                android:text="@string/drum_pot_opc_known_nodes_hint"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/opc_btn_move_pot"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/drum_pot_opc_action_move_pot" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_start"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_start" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_stop"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_stop" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_reset"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_reset" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/drum_pot_opc_rotate_label"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/opc_chip_group_rotate_gear"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:singleSelection="true"
-                app:selectionRequired="true">
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_rotate_gear_0"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_rotate_gear_0" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_rotate_gear_1"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="@string/drum_pot_opc_rotate_gear_1" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_rotate_gear_2"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_rotate_gear_2" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_rotate_gear_3"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_rotate_gear_3" />
-            </com.google.android.material.chip.ChipGroup>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_set_rotate_gear"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_set_rotate_gear" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_rotate_start"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_rotate_start" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_rotate_stop"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_rotate_stop" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/drum_pot_opc_heat_label"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/opc_chip_group_heat_gear"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:singleSelection="true"
-                app:selectionRequired="true">
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_heat_gear_0"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_heat_gear_0" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_heat_gear_1"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="@string/drum_pot_opc_heat_gear_1" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_heat_gear_2"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_heat_gear_2" />
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/opc_chip_heat_gear_3"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_heat_gear_3" />
-            </com.google.android.material.chip.ChipGroup>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_set_heat_gear"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_set_heat_gear" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_heat_start"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_heat_start" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_heat_stop"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_heat_stop" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/drum_pot_opc_quick_feed_label"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_liquid_feed"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_liquid_feed" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_solid_feed"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_solid_feed" />
-            </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/opc_btn_read_feed"
+                android:id="@+id/opc_btn_read_all_nodes"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/drum_pot_opc_action_read_feed" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/drum_pot_opc_quick_safe_label"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:layout_marginTop="12dp"
+                android:text="@string/drum_pot_opc_action_read_all_nodes" />
 
             <LinearLayout
+                android:id="@+id/opc_known_nodes_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_exhaust_on"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_exhaust_on" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_exhaust_off"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:text="@string/drum_pot_opc_action_exhaust_off" />
-            </LinearLayout>
+                android:orientation="vertical"
+                android:paddingBottom="8dp"
+                android:paddingEnd="8dp" />
 
             <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/drum_pot_opc_quick_read_label"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/opc_btn_refresh_status"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/drum_pot_opc_action_refresh_status" />
-
-            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:text="@string/device_response_label"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/device_response_label"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/opc_btn_clear_log"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/drum_pot_opc_clear_log" />
-            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/opc_btn_clear_log"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/drum_pot_opc_clear_log" />
 
             <TextView
                 android:id="@+id/opc_response_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
                 android:background="?attr/colorSurfaceVariant"
                 android:fontFamily="monospace"
-                android:minHeight="160dp"
-                android:padding="12dp"
+                android:gravity="top|start"
+                android:includeFontPadding="true"
+                android:lineSpacingExtra="4dp"
+                android:minHeight="200dp"
+                android:paddingStart="12dp"
+                android:paddingTop="16dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="16dp"
                 android:text="@string/device_response_empty"
                 android:textIsSelectable="true"
                 android:textSize="12sp" />

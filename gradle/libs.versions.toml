@@ -12,6 +12,7 @@ okhttp = "4.12.0"
 gson = "2.11.0"
 volcRtc = "3.60.102.4900"
 milo = "0.6.12"
+amqp = "5.22.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -26,6 +27,7 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 volc-rtc = { group = "com.volcengine", name = "VolcEngineRTC", version.ref = "volcRtc" }
 milo-sdk-client = { group = "org.eclipse.milo", name = "sdk-client", version.ref = "milo" }
 milo-sdk-core = { group = "org.eclipse.milo", name = "sdk-core", version.ref = "milo" }
+amqp-client = { group = "com.rabbitmq", name = "amqp-client", version.ref = "amqp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

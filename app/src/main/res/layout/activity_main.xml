@@ -24,6 +24,55 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:id="@+id/home_order_banner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="20dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:ellipsize="end"
+        android:focusable="true"
+        android:maxLines="1"
+        android:paddingVertical="8dp"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="@color/home_text_secondary"
+        app:layout_constraintEnd_toStartOf="@id/home_settings_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="订单 · 已连接，等待订单" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/home_device_status_banner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="@color/home_device_status_warn_bg"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/home_settings_button"
+        app:strokeWidth="0dp">
+
+        <TextView
+            android:id="@+id/home_device_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="@color/home_device_status_warn_text"
+            tools:text="料仓未连接（192.168.2.40:10000） · 滚筒未连接（192.168.2.60:4840）" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
         android:id="@+id/home_status_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -36,7 +85,7 @@
         app:layout_constraintBottom_toTopOf="@id/home_ai_avatar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/home_settings_button"
+        app:layout_constraintTop_toBottomOf="@id/home_device_status_banner"
         app:layout_constraintVertical_chainStyle="packed" />
 
     <com.example.test5.ui.AiAvatarVisualizerView

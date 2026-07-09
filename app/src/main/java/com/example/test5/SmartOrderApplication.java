@@ -6,6 +6,8 @@ import com.example.test5.device.opcua.DrumPotConnectionManager;
 import com.example.test5.device.tashi.StockBinConnectionManager;
 import com.example.test5.net.NetworkDiagnostics;
 import com.example.test5.recipe.DishsConfigStore;
+import com.example.test5.order.mq.MqSettingsStore;
+import com.example.test5.order.mq.OrderMqManager;
 import com.example.test5.wake.IflytekSdkHolder;
 import com.example.test5.wake.WakeConfig;
 
@@ -16,9 +18,11 @@ public class SmartOrderApplication extends Application {
     public void onCreate() {
         super.onCreate();
         NetworkDiagnostics.init(this);
+        MqSettingsStore.ensurePolicyDefaults(this);
         StockBinConnectionManager.getInstance(this).connectAsync();
         DrumPotConnectionManager.getInstance(this).connectAsync();
         new Thread(() -> DishsConfigStore.ensureLoaded(this), "DishsConfigInit").start();
+        OrderMqManager.getInstance().start(this);
         if (WakeConfig.ENABLE_WAKE_SERVICE) {
             IflytekSdkHolder.init(this);
         }

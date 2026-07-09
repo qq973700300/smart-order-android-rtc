@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/menu_order_inbox"
+        android:title="@string/order_inbox_entry" />
+    <item
+        android:id="@+id/menu_mq_settings"
+        android:title="@string/mq_settings_entry" />
+    <item
         android:id="@+id/menu_contact_service"
         android:title="@string/home_contact_service" />
     <item

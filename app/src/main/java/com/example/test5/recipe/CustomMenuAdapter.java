@@ -12,9 +12,10 @@ import com.example.test5.R;
 import com.example.test5.order.OrderCart;
 import com.google.android.material.button.MaterialButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/** 自定义菜谱网格：+/- 加入购物车。 */
+/** 手动点餐网格：从本地自定义菜谱 +/- 加入购物车。 */
 public final class CustomMenuAdapter extends RecyclerView.Adapter<CustomMenuAdapter.Holder> {
 
     public interface Listener {
@@ -32,8 +33,9 @@ public final class CustomMenuAdapter extends RecyclerView.Adapter<CustomMenuAdap
     }
 
     public void setItems(List<DishsConfig> newItems) {
+        List<DishsConfig> copy = newItems == null ? new ArrayList<>() : new ArrayList<>(newItems);
         items.clear();
-        items.addAll(newItems);
+        items.addAll(copy);
         notifyDataSetChanged();
     }
 

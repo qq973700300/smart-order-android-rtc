@@ -1,6 +1,8 @@
 package com.example.test5;
 
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -8,28 +10,33 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.test5.order.MenuCatalog;
-import com.example.test5.order.ManualMenuDishAdapter;
 import com.example.test5.order.OrderCart;
 import com.example.test5.order.OrderSubmitDialogs;
 import com.example.test5.order.RestaurantFunctionHandler;
+import com.example.test5.recipe.CustomMenuAdapter;
+import com.example.test5.recipe.DishsConfig;
+import com.example.test5.recipe.DishsConfigStore;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** 手动点餐：菜单网格 +/-，与语音购物车共享 OrderCart */
+/** 手动点餐：从本地自定义菜谱选菜送厨。 */
 public class ManualOrderActivity extends AppCompatActivity {
 
     public static final String EXTRA_TITLE = "extra_title";
 
     private OrderCart cart;
-    private ManualMenuDishAdapter adapter;
+    private CustomMenuAdapter adapter;
     private TextView cartSummaryView;
     private MaterialButton checkoutButton;
+    private TextInputEditText searchInput;
     private RestaurantFunctionHandler orderHandler;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
@@ -41,6 +48,7 @@ public class ManualOrderActivity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.manual_toolbar);
         RecyclerView menuRecycler = findViewById(R.id.menu_recycler);
+        searchInput = findViewById(R.id.manual_search_input);
         cartSummaryView = findViewById(R.id.cart_summary_text);
         checkoutButton = findViewById(R.id.checkout_button);
 
@@ -59,7 +67,7 @@ public class ManualOrderActivity extends AppCompatActivity {
             OrderSubmitDialogs.show(this, success, message, summary);
         }));
 
-        adapter = new ManualMenuDishAdapter(MenuCatalog.getItems(), cart, this::updateCartSummary);
+        adapter = new CustomMenuAdapter(new ArrayList<>(), cart, this::updateCartSummary);
         menuRecycler.setLayoutManager(new GridLayoutManager(this, 2));
         menuRecycler.setAdapter(adapter);
         int bottomPad = (int) (96 * getResources().getDisplayMetrics().density);
@@ -68,6 +76,22 @@ public class ManualOrderActivity extends AppCompatActivity {
 
         checkoutButton.setOnClickListener(v -> submitOrder());
 
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                loadDishes(s != null ? s.toString() : "");
+            }
+        });
+
+        loadDishes("");
         updateCartSummary();
     }
 
@@ -75,10 +99,8 @@ public class ManualOrderActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         cart.setChangeListener(this::updateCartSummaryFromCart);
+        loadDishes(currentKeyword());
         updateCartSummary();
-        if (adapter != null) {
-            adapter.refreshAll();
-        }
     }
 
     @Override
@@ -92,6 +114,17 @@ public class ManualOrderActivity extends AppCompatActivity {
         super.onDestroy();
         orderHandler.shutdown();
         executor.shutdownNow();
+    }
+
+    private String currentKeyword() {
+        return searchInput.getText() != null ? searchInput.getText().toString() : "";
+    }
+
+    private void loadDishes(String keyword) {
+        executor.execute(() -> {
+            List<DishsConfig> list = DishsConfigStore.search(this, keyword);
+            runOnUiThread(() -> adapter.setItems(list));
+        });
     }
 
     private void submitOrder() {
