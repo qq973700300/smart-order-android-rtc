@@ -66,17 +66,22 @@ public final class DishsConfigStore {
         if (dishName == null || dishName.isEmpty()) {
             return null;
         }
+        String normalized = normalizeDishName(dishName);
         for (DishsConfig item : cache) {
-            if (item.dishName != null && dishName.contains(item.dishName)) {
+            if (item.dishName != null && item.dishName.equals(normalized)) {
                 return item.copy();
             }
         }
         for (DishsConfig item : cache) {
-            if (item.dishName != null && item.dishName.contains(dishName)) {
+            if (item.dishName != null && normalized.equals(normalizeDishName(item.dishName))) {
                 return item.copy();
             }
         }
         return null;
+    }
+
+    private static String normalizeDishName(String dishName) {
+        return dishName.replace("(机器)", "").trim();
     }
 
     public static synchronized boolean isValidDishName(Context context, String dishName) {

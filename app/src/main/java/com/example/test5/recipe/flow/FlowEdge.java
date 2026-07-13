@@ -5,6 +5,9 @@ public final class FlowEdge {
 
     public String fromNodeId;
     public String toNodeId;
+    /** left / right / top / bottom，可为空（绘制时自动推断）。 */
+    public String fromPort;
+    public String toPort;
 
     public FlowEdge() {
     }
@@ -12,5 +15,12 @@ public final class FlowEdge {
     public FlowEdge(String fromNodeId, String toNodeId) {
         this.fromNodeId = fromNodeId;
         this.toNodeId = toNodeId;
+    }
+
+    public FlowEdge(String fromNodeId, String fromPort, String toNodeId, String toPort) {
+        this.fromNodeId = fromNodeId;
+        this.fromPort = fromPort;
+        this.toNodeId = toNodeId;
+        this.toPort = toPort;
     }
 }

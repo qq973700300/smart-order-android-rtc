@@ -16,6 +16,9 @@
         android:id="@+id/menu_drum_pot_settings"
         android:title="@string/drum_pot_settings_entry" />
     <item
+        android:id="@+id/menu_production_log"
+        android:title="@string/production_log_entry" />
+    <item
         android:id="@+id/menu_admin_debug"
         android:title="@string/admin_debug_entry" />
 </menu>

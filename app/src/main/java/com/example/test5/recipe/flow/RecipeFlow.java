@@ -19,7 +19,7 @@ public final class RecipeFlow {
             copy.nodes.add(node.copy());
         }
         for (FlowEdge edge : edges) {
-            copy.edges.add(new FlowEdge(edge.fromNodeId, edge.toNodeId));
+            copy.edges.add(new FlowEdge(edge.fromNodeId, edge.fromPort, edge.toNodeId, edge.toPort));
         }
         return copy;
     }

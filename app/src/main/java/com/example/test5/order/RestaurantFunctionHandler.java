@@ -4,15 +4,18 @@ package com.example.test5.order;
 
 import android.util.Log;
 
-import com.example.test5.order.mq.MqSettingsStore;
+import com.example.test5.order.mq.OrderProductionExecutor;
+import com.example.test5.recipe.DishsConfig;
 import com.example.test5.recipe.DishsConfigStore;
+import com.example.test5.recipe.flow.FlowNode;
+import com.example.test5.recipe.flow.RecipeFlow;
+import com.example.test5.recipe.flow.RecipeFlowExecutor;
+import com.example.test5.recipe.flow.RecipeFlowStore;
+import com.example.test5.ui.flow.FlowProductionUi;
+import com.example.test5.ui.flow.FlowStepErrorHandler;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-
-
-
-import java.io.IOException;
 
 import java.util.Map;
 
@@ -26,7 +29,7 @@ import java.util.concurrent.Executors;
 
  * Function Calling 工具执行：add_dish / remove_dish / get_cart / submit_order。
 
- * submit_order 会调用 OrderSubscribe 送厨。
+ * submit_order 在本机直接驱动产线（料仓/自定义流程）。
 
  */
 
@@ -66,6 +69,10 @@ public final class RestaurantFunctionHandler {
         void onEndConversationRequested();
     }
 
+    public interface ProductionProgressListener {
+        void onProductionProgress(String dishName, int index, int total, String message);
+    }
+
     private final Gson gson = new Gson();
 
     private final OrderCart cart = OrderCart.getInstance();
@@ -74,17 +81,23 @@ public final class RestaurantFunctionHandler {
 
     private final DeviceFunctionHandler deviceHandler;
 
+    private final OrderProductionExecutor productionExecutor;
+
     private final android.content.Context appContext;
 
     private CartListener cartListener;
 
     private SubmitListener submitListener;
+    private ProductionProgressListener productionProgressListener;
+    private FlowProductionUi flowProductionUi;
+    private FlowStepErrorHandler stepErrorHandler;
     private SingListener singListener;
     private EndConversationListener endConversationListener;
 
     public RestaurantFunctionHandler(android.content.Context context) {
         appContext = context.getApplicationContext();
         deviceHandler = new DeviceFunctionHandler(context);
+        productionExecutor = new OrderProductionExecutor(context);
     }
 
     public void setCartListener(CartListener cartListener) {
@@ -97,6 +110,19 @@ public final class RestaurantFunctionHandler {
 
         this.submitListener = submitListener;
 
+    }
+
+    public void setProductionProgressListener(ProductionProgressListener listener) {
+        this.productionProgressListener = listener;
+    }
+
+    public void setFlowProductionUi(FlowProductionUi ui) {
+        this.flowProductionUi = ui;
+    }
+
+    public void setFlowStepErrorHandler(FlowStepErrorHandler handler) {
+        this.stepErrorHandler = handler;
+        productionExecutor.setStepErrorHandler(handler);
     }
 
     public void setSingListener(SingListener singListener) {
@@ -269,120 +295,157 @@ public final class RestaurantFunctionHandler {
 
 
 
-    private String submitOrderSync() throws IOException, InterruptedException {
-
+    private String submitOrderSync() {
         int total = cart.countActive();
-
         if (total == 0) {
-
             return error("购物车为空，无法送厨");
-
         }
-
-
 
         StringBuilder summary = new StringBuilder();
-
         int submitted = 0;
-
         String lastError = "";
-
-
+        boolean userStoppedAll = false;
 
         for (Map.Entry<String, Integer> entry : cart.snapshot().entrySet()) {
-
+            if (userStoppedAll) {
+                break;
+            }
             int quantity = entry.getValue();
-
             if (quantity <= 0) {
-
                 continue;
-
             }
-
             String dishName = entry.getKey();
-
             int dishSubmitted = 0;
-
             for (int i = 0; i < quantity; i++) {
+                if (userStoppedAll) {
+                    break;
+                }
+                final String currentDish = dishName;
+                notifyDishStarted(currentDish);
+                RecipeFlowExecutor.ProgressListener stepListener = new RecipeFlowExecutor.ProgressListener() {
+                    @Override
+                    public void onStep(int index, int total, FlowNode node, String message) {
+                        notifyStepStarted(currentDish, node, index, total, message);
+                    }
 
-                String message = "{" + dishName + ":" + (i + 1) + "}";
+                    @Override
+                    public void onStepFinished(
+                            int index,
+                            int total,
+                            FlowNode node,
+                            boolean success,
+                            String message
+                    ) {
+                        notifyStepFinished(currentDish, node, index, total, success, message);
+                    }
 
-                HttpHelper.OrderSubscribeResult result = HttpHelper.submitOrder(
-
-                        StoreConfig.STORE_ID,
-
-                        MqSettingsStore.getEquipmentNum(appContext),
-
-                        StoreConfig.STORE_NAME,
-
-                        message
-
-                );
-
-                if (result.success) {
-
+                    @Override
+                    public void onWaitTick(FlowNode node, int remainingSeconds, int totalSeconds) {
+                        notifyWaitTick(currentDish, node, remainingSeconds, totalSeconds);
+                    }
+                };
+                OrderProductionExecutor.ProduceResult result =
+                        productionExecutor.produceLocal(dishName, "local", stepListener);
+                notifyDishFinished(currentDish, result.ok, result.message);
+                if (result.userStopped) {
+                    userStoppedAll = true;
+                    lastError = result.message.isEmpty() ? "流程已停止" : result.message;
+                    break;
+                }
+                if (result.ok) {
                     dishSubmitted++;
-
                     submitted++;
-
                 } else {
-
-                    lastError = result.msg;
-
+                    lastError = result.message.isEmpty() ? "生产失败" : result.message;
                 }
-
-                Thread.sleep(300);
-
             }
-
             cart.setQuantity(dishName, Math.max(0, quantity - dishSubmitted));
-
             if (dishSubmitted > 0) {
-
                 if (summary.length() > 0) {
-
                     summary.append('，');
-
                 }
-
                 summary.append(dishName).append(" x").append(dishSubmitted);
-
             }
-
         }
 
-
-
         if (submitted == 0) {
-
-            String msg = lastError.isEmpty() ? "送厨失败" : lastError;
-
+            String msg = lastError.isEmpty() ? "生产失败" : lastError;
             notifySubmit(false, msg, "");
-
             return error(msg);
-
         }
 
         String summaryText = summary.toString();
-
         cart.setLastSubmittedSummary(summaryText);
-
-        String message = "已送厨：" + summaryText + "，机器开始做了";
-
+        String message = userStoppedAll
+                ? ("部分完成：" + summaryText + "（已手动停止）")
+                : ("已开始生产：" + summaryText);
         Log.i(TAG, message);
-
         notifySubmit(true, message, summaryText);
 
         JsonObject ok = new JsonObject();
-
         ok.addProperty("ok", true);
-
         ok.addProperty("message", message);
-
         ok.addProperty("submitted_summary", summaryText);
-
+        ok.addProperty("user_stopped", userStoppedAll);
         return gson.toJson(ok);
+    }
 
+    private void notifyDishStarted(String dishName) {
+        if (flowProductionUi != null) {
+            flowProductionUi.onDishStarted(dishName);
+            DishsConfigStore.reload(appContext);
+            RecipeFlowStore.reload(appContext);
+            DishsConfig config = DishsConfigStore.findByDishName(appContext, dishName);
+            RecipeFlow flow = config != null
+                    ? RecipeFlowStore.getByRecipeId(appContext, config.id)
+                    : null;
+            flowProductionUi.onDishFlowReady(dishName, flow);
+        }
+    }
+
+    private void notifyStepStarted(
+            String dishName,
+            FlowNode node,
+            int index,
+            int total,
+            String message
+    ) {
+        if (flowProductionUi != null) {
+            flowProductionUi.onStepStarted(dishName, node, index, total, message);
+        }
+        if (productionProgressListener != null) {
+            productionProgressListener.onProductionProgress(dishName, index, total, message);
+        }
+    }
+
+    private void notifyStepFinished(
+            String dishName,
+            FlowNode node,
+            int index,
+            int total,
+            boolean success,
+            String message
+    ) {
+        if (flowProductionUi != null) {
+            flowProductionUi.onStepFinished(dishName, node, index, total, success, message);
+        }
+    }
+
+    private void notifyWaitTick(
+            String dishName,
+            FlowNode node,
+            int remainingSeconds,
+            int totalSeconds
+    ) {
+        if (flowProductionUi != null) {
+            flowProductionUi.onWaitTick(dishName, node, remainingSeconds, totalSeconds);
+        }
+    }
+
+    private void notifyDishFinished(String dishName, boolean success, String message) {
+        if (flowProductionUi != null) {
+            flowProductionUi.onDishFinished(dishName, success, message);
+        }
     }
 
 

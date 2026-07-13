@@ -61,6 +61,11 @@ public final class RecipeFlowStore {
         return flow != null ? flow.nodes.size() : 0;
     }
 
+    public static synchronized void reload(Context context) {
+        cache = null;
+        ensureLoaded(context);
+    }
+
     private static void ensureLoaded(Context context) {
         if (cache != null) {
             return;

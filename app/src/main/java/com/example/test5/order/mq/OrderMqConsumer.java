@@ -3,6 +3,7 @@ package com.example.test5.order.mq;
 import android.content.Context;
 import android.util.Log;
 
+import com.example.test5.log.ProductionLogStore;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -114,6 +115,12 @@ final class OrderMqConsumer implements Runnable {
         channel.basicConsume(queue, false, consumer);
         connectionStatus = "已连接，等待订单";
         Log.i(TAG, "connected, consuming " + queue);
+        ProductionLogStore.append(
+                ProductionLogStore.Level.INFO,
+                ProductionLogStore.Category.MQ,
+                "MQ 已连接",
+                host + ":" + port + " · " + queue
+        );
 
         while (running && connection.isOpen()) {
             sleep(2_000);
@@ -129,6 +136,12 @@ final class OrderMqConsumer implements Runnable {
         OrderMqModels.DataItem dataItem = executor.parseDataItem(json);
         if (dataItem == null) {
             Log.w(TAG, "parse DataItem failed");
+            ProductionLogStore.append(
+                    ProductionLogStore.Level.ERROR,
+                    ProductionLogStore.Category.MQ,
+                    "MQ 订单解析失败",
+                    json.length() > 120 ? json.substring(0, 120) + "…" : json
+            );
             return false;
         }
 

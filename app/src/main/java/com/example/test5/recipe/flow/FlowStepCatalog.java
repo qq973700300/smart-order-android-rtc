@@ -1,5 +1,6 @@
 package com.example.test5.recipe.flow;
 
+import com.example.test5.device.opcua.DrumPotOpcConfig;
 import com.example.test5.device.opcua.DrumPotOpcMaterials;
 import com.example.test5.device.yuejiang.YuejiangConfig;
 
@@ -98,6 +99,47 @@ public final class FlowStepCatalog {
                 "rotate_stop",
                 "停止旋转",
                 Collections.emptyList()));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_write_position",
+                "写绝对定位位置",
+                Collections.singletonList(new FlowParamDef(
+                        "position", "绝对定位位置(Float)", String.valueOf(DrumPotOpcConfig.AXIS_POS_SERVE)))));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_pulse_move",
+                "触发绝对定位",
+                Collections.emptyList()));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_move",
+                "定位到投菜位",
+                Collections.singletonList(new FlowParamDef(
+                        "position", "绝对定位位置(Float)", String.valueOf(DrumPotOpcConfig.AXIS_POS_FEED)))));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_move",
+                "定位到炒菜位",
+                Collections.singletonList(new FlowParamDef(
+                        "position", "绝对定位位置(Float)", String.valueOf(DrumPotOpcConfig.AXIS_POS_COOK)))));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_move",
+                "定位到出菜位",
+                Collections.singletonList(new FlowParamDef(
+                        "position", "绝对定位位置(Float)", String.valueOf(DrumPotOpcConfig.AXIS_POS_SERVE)))));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_move",
+                "定位到洗锅位",
+                Collections.singletonList(new FlowParamDef(
+                        "position", "绝对定位位置(Float)", String.valueOf(DrumPotOpcConfig.AXIS_POS_WASH)))));
+        list.add(new FlowActionDef(
+                FlowDeviceType.DRUM_POT,
+                "abs_move",
+                "滚筒绝对定位",
+                Collections.singletonList(new FlowParamDef(
+                        "position", "绝对定位位置(Float)", "0"))));
         list.add(new FlowActionDef(
                 FlowDeviceType.DRUM_POT,
                 "wait",

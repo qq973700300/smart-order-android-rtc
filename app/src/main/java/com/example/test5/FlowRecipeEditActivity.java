@@ -41,6 +41,7 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
     private TextInputEditText nameInput;
     private TextView hintText;
     private FlowCanvasView canvas;
+    private MaterialToolbar toolbar;
     private RecipeFlow currentFlow;
 
     private String editingRecipeId;
@@ -51,7 +52,7 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_flow_recipe_edit);
 
-        MaterialToolbar toolbar = findViewById(R.id.flow_edit_toolbar);
+        toolbar = findViewById(R.id.flow_edit_toolbar);
         nameInput = findViewById(R.id.flow_dish_name_input);
         hintText = findViewById(R.id.flow_hint_text);
         canvas = findViewById(R.id.flow_canvas);
@@ -82,7 +83,7 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
 
         zoomOutButton.setOnClickListener(v -> canvas.zoomOut());
         zoomInButton.setOnClickListener(v -> canvas.zoomIn());
-        resetViewButton.setOnClickListener(v -> canvas.resetViewport());
+        resetViewButton.setOnClickListener(v -> canvas.fitFlowInView());
         editNodeButton.setOnClickListener(v -> editSelectedNode());
         deleteNodeButton.setOnClickListener(v -> canvas.removeSelectedNode());
         testButton.setOnClickListener(v -> testRun());
@@ -94,7 +95,7 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
         } else {
             toolbar.setTitle(R.string.dishs_add);
             currentFlow = FlowStepCatalog.createDefaultTemplate();
-            canvas.setFlow(currentFlow);
+            canvas.setFlowAndFitToView(currentFlow);
         }
     }
 
@@ -133,9 +134,7 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
     }
 
     private void addAction(FlowActionDef def) {
-        float x = 120f + currentFlow.nodes.size() * 24f;
-        float y = 100f + currentFlow.nodes.size() * 120f;
-        canvas.addNode(def, x, y);
+        canvas.addNodeAtViewportCenter(def);
         currentFlow = canvas.getFlow();
         Toast.makeText(this, R.string.flow_node_added, Toast.LENGTH_SHORT).show();
     }
@@ -158,7 +157,7 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
                     return;
                 }
                 currentFlow = flowToBind;
-                canvas.setFlow(currentFlow);
+                canvas.setFlowAndFitToView(currentFlow != null ? currentFlow : new RecipeFlow());
                 nameInput.setText(configToBind.dishName);
             });
         });
@@ -249,7 +248,10 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
             flow.recipeId = config.id;
             flow.dishName = dishName;
 
-            if (editingRecipeId == null) {
+            final String savedId = config.id;
+            final boolean wasNew = editingRecipeId == null;
+
+            if (wasNew) {
                 DishsConfigStore.add(this, config);
             } else {
                 DishsConfigStore.update(this, config);
@@ -257,9 +259,12 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
             RecipeFlowStore.save(this, flow);
 
             runOnUiThread(() -> {
+                if (wasNew) {
+                    editingRecipeId = savedId;
+                    toolbar.setTitle(R.string.dishs_edit);
+                }
                 Toast.makeText(this, R.string.flow_saved, Toast.LENGTH_SHORT).show();
                 setResult(RESULT_OK);
-                finish();
             });
         });
     }
@@ -286,12 +291,25 @@ public class FlowRecipeEditActivity extends AppCompatActivity {
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(R.string.flow_test_run, (d, w) -> executor.execute(() -> {
                     RecipeFlowExecutor runner = new RecipeFlowExecutor(this);
-                    RecipeFlowExecutor.Result result = runner.execute(flow, temp, (index, total, node, message) ->
-                            runOnUiThread(() -> hintText.setText(
-                                    getString(R.string.flow_test_progress, index, total, message))));
-                    runOnUiThread(() -> Toast.makeText(this,
-                            result.ok ? result.message : result.message,
-                            Toast.LENGTH_LONG).show());
+                    RecipeFlowExecutor.Result result = runner.execute(flow, temp,
+                            new RecipeFlowExecutor.ProgressListener() {
+                                @Override
+                                public void onStep(int index, int total, FlowNode node, String message) {
+                                    runOnUiThread(() -> hintText.setText(
+                                            getString(R.string.flow_test_progress, index, total, message)));
+                                }
+
+                                @Override
+                                public void onStepFinished(
+                                        int index,
+                                        int total,
+                                        FlowNode node,
+                                        boolean success,
+                                        String message
+                                ) {
+                                }
+                            });
+                    runOnUiThread(() -> Toast.makeText(this, result.message, Toast.LENGTH_LONG).show());
                 }))
                 .show();
     }

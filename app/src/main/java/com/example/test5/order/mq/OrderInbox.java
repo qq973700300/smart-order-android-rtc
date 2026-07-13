@@ -3,6 +3,8 @@ package com.example.test5.order.mq;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.test5.log.ProductionLogStore;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -110,6 +112,7 @@ public final class OrderInbox {
         while (entries.size() > MAX_ENTRIES) {
             entries.remove(entries.size() - 1);
         }
+        logReceived(entry);
         notifyChanged();
         return entry;
     }
@@ -120,6 +123,7 @@ public final class OrderInbox {
         }
         entry.status = status;
         entry.statusMessage = message != null ? message : "";
+        logStatus(entry, status, message);
         notifyChanged();
     }
 
@@ -147,5 +151,46 @@ public final class OrderInbox {
         for (Listener listener : listeners) {
             listener.onOrdersChanged();
         }
+    }
+
+    private static void logReceived(Entry entry) {
+        String sourceLabel = "local".equals(entry.source)
+                ? "本机"
+                : ("voice".equals(entry.source) ? "语音" : "小程序");
+        ProductionLogStore.append(
+                ProductionLogStore.Level.INFO,
+                ProductionLogStore.Category.ORDER,
+                "收到订单",
+                sourceLabel + " · " + entry.dishName,
+                entry.orderNumber,
+                entry.dishName
+        );
+    }
+
+    private static void logStatus(Entry entry, Status status, String message) {
+        ProductionLogStore.Level level = ProductionLogStore.Level.INFO;
+        ProductionLogStore.Category category = ProductionLogStore.Category.ORDER;
+        String title = "状态更新";
+        if (status == Status.FAILED) {
+            level = ProductionLogStore.Level.ERROR;
+            title = "生产失败";
+        } else if (status == Status.SKIPPED) {
+            level = ProductionLogStore.Level.WARN;
+            title = "已跳过";
+        } else if (status == Status.DONE) {
+            title = "生产完成";
+        } else if (status == Status.PROCESSING) {
+            category = ProductionLogStore.Category.FLOW;
+            title = "流程执行";
+        }
+        String body = message != null && !message.isEmpty() ? message : status.name();
+        ProductionLogStore.append(
+                level,
+                category,
+                title,
+                body,
+                entry.orderNumber,
+                entry.dishName
+        );
     }
 }

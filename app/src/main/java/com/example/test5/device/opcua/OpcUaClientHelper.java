@@ -161,6 +161,65 @@ public final class OpcUaClientHelper {
                 "PLC 中无 BrowseName「" + browseName + "」，请先 loadInterfaceNodeMap");
     }
 
+    /** BrowseName 未加载时回退到固定 NodeId（如 ns=4;i=276）。 */
+    public synchronized String resolveNodeIdOrFallback(String browseName, String fallbackNodeId) {
+        String mapped = browseNameToNodeId.get(browseName);
+        if (mapped != null) {
+            return mapped;
+        }
+        if (fallbackNodeId != null && !fallbackNodeId.trim().isEmpty()) {
+            Log.w(LOG_TAG, "[resolve] fallback " + browseName + " -> " + fallbackNodeId);
+            return fallbackNodeId.trim();
+        }
+        throw new IllegalStateException(
+                "PLC 中无 BrowseName「" + browseName + "」，且无 fallback NodeId");
+    }
+
+    /** 仅当 browse 映射已加载且存在该 BrowseName 时返回 NodeId，否则 null。 */
+    public synchronized String tryResolveBrowseName(String browseName) {
+        if (browseName == null || browseName.isEmpty()) {
+            return null;
+        }
+        return browseNameToNodeId.get(browseName);
+    }
+
+    public synchronized boolean readBoolean(String nodeIdText) throws Exception {
+        return Boolean.TRUE.equals(readScalar(nodeIdText));
+    }
+
+    public synchronized float readFloat(String nodeIdText) throws Exception {
+        Object value = readScalar(nodeIdText);
+        if (value instanceof Number) {
+            return ((Number) value).floatValue();
+        }
+        if (value instanceof Boolean) {
+            return ((Boolean) value) ? 1f : 0f;
+        }
+        if (value == null) {
+            throw new IllegalStateException("读取值为 null: " + nodeIdText);
+        }
+        return Float.parseFloat(String.valueOf(value));
+    }
+
+    private Object readScalar(String nodeIdText) throws Exception {
+        ensureConnected();
+        NodeId nodeId = parseNodeId(nodeIdText, null);
+        DataValue[] values = client.read(
+                0.0,
+                TimestampsToReturn.Both,
+                List.of(new ReadValueId(nodeId, AttributeId.Value.uid(), null, QualifiedName.NULL_VALUE))
+        ).get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS).getResults();
+        if (values.length == 0 || values[0] == null) {
+            throw new IllegalStateException("读取失败: " + nodeIdText);
+        }
+        StatusCode status = values[0].getStatusCode();
+        if (status != null && status.isBad()) {
+            throw new IllegalStateException("读取失败 " + status + ": " + nodeIdText);
+        }
+        Variant variant = values[0].getValue();
+        return variant != null ? variant.getValue() : null;
+    }
+
     /** 非阻塞，供 UI 轮询；勿在连接/浏览等长耗时 synchronized 方法持锁时调用。 */
     public boolean isConnected() {
         return sessionConnected;
@@ -210,18 +269,14 @@ public final class OpcUaClientHelper {
         StatusCode status = client.writeValue(nodeId, DataValue.valueOnly(variant))
                 .get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 
-        if (!status.isGood() && isNumericText(rawValue)) {
-            int iv = Integer.parseInt(rawValue.trim());
-            Variant fallback = writeNumericWithFallback(nodeId, iv, dataType);
+        if (!status.isGood()) {
+            Variant fallback = writeWithTypeFallback(nodeId, rawValue, dataType);
             if (fallback != null) {
                 variant = fallback;
             } else {
-                Log.e(LOG_TAG, "[write] failed all types status=" + status + " dataType=" + dataType);
-                throw new IllegalStateException("写入失败(类型不匹配): " + status + " dataType=" + dataType);
+                Log.e(LOG_TAG, "[write] failed status=" + status + " dataType=" + dataType);
+                throw new IllegalStateException("写入失败: " + status);
             }
-        } else if (!status.isGood()) {
-            Log.e(LOG_TAG, "[write] failed status=" + status);
-            throw new IllegalStateException("写入失败: " + status);
         }
         String result = "OK -> " + variant;
         Log.i(LOG_TAG, "[write] result " + result);
@@ -489,22 +544,6 @@ public final class OpcUaClientHelper {
         return dataType;
     }
 
-    private static boolean isNumericText(String rawValue) {
-        if (rawValue == null) {
-            return false;
-        }
-        String text = rawValue.trim();
-        if (text.isEmpty() || text.contains(".")) {
-            return false;
-        }
-        try {
-            Integer.parseInt(text);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
-
     /** 按 DataType 构造写入值；西门子 ns=3;i=3002 多为 Word(UInt16)。 */
     private static Variant buildWriteVariant(String rawValue, String dataType) {
         String text = rawValue == null ? "" : rawValue.trim();
@@ -522,8 +561,8 @@ public final class OpcUaClientHelper {
             }
         }
         try {
-            if (text.contains(".")) {
-                return new Variant(Double.parseDouble(text));
+            if (text.contains(".") || text.contains("e") || text.contains("E")) {
+                return buildFloatingVariant(text, dataType);
             }
             int iv = Integer.parseInt(text);
             if (dataType != null && dataType.contains("i=3006")) {
@@ -535,13 +574,68 @@ public final class OpcUaClientHelper {
             if (dataType != null && dataType.contains("Int16")) {
                 return new Variant((short) iv);
             }
-            if (dataType != null && (dataType.contains("Float") || dataType.contains("Double"))) {
+            if (dataType != null && dataType.contains("Float")) {
                 return new Variant((float) iv);
+            }
+            if (dataType != null && dataType.contains("Double")) {
+                return new Variant((double) iv);
             }
             return new Variant(UShort.valueOf(iv));
         } catch (NumberFormatException e) {
             return new Variant(text);
         }
+    }
+
+    private static Variant buildFloatingVariant(String text, String dataType) {
+        if (dataType != null && dataType.contains("Double") && !dataType.contains("Float")) {
+            return new Variant(Double.parseDouble(text));
+        }
+        // PLC Real 多为 Float；绝对定位位置 ns=4;i=276 即 Float
+        return new Variant(Float.parseFloat(text));
+    }
+
+    private Variant writeWithTypeFallback(NodeId nodeId, String rawValue, String dataType) throws Exception {
+        String text = rawValue == null ? "" : rawValue.trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        List<Variant> candidates = new ArrayList<>();
+        if (text.contains(".") || text.contains("e") || text.contains("E")) {
+            float fv = Float.parseFloat(text);
+            double dv = Double.parseDouble(text);
+            if (dataType != null && dataType.contains("Float")) {
+                candidates.add(new Variant(fv));
+                candidates.add(new Variant(dv));
+            } else if (dataType != null && dataType.contains("Double")) {
+                candidates.add(new Variant(dv));
+                candidates.add(new Variant(fv));
+            } else {
+                candidates.add(new Variant(fv));
+                candidates.add(new Variant(dv));
+            }
+        } else {
+            try {
+                int iv = Integer.parseInt(text);
+                return writeNumericWithFallback(nodeId, iv, dataType);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        StatusCode lastStatus = null;
+        for (Variant candidate : candidates) {
+            Object raw = candidate.getValue();
+            Log.i(LOG_TAG, "[write] retry javaType="
+                    + (raw == null ? "null" : raw.getClass().getSimpleName()));
+            StatusCode status = client.writeValue(nodeId, DataValue.valueOnly(candidate))
+                    .get(DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            lastStatus = status;
+            if (status.isGood()) {
+                Log.i(LOG_TAG, "[write] fallback OK " + raw.getClass().getSimpleName());
+                return candidate;
+            }
+        }
+        Log.w(LOG_TAG, "[write] float fallbacks failed last=" + lastStatus + " dataType=" + dataType);
+        return null;
     }
 
     private Variant writeNumericWithFallback(NodeId nodeId, int value, String dataType) throws Exception {

@@ -16,7 +16,11 @@ import com.example.test5.recipe.flow.FlowActionDef;
 import com.example.test5.recipe.flow.FlowDeviceType;
 import com.example.test5.recipe.flow.FlowEdge;
 import com.example.test5.recipe.flow.FlowNode;
+import com.example.test5.recipe.flow.FlowPort;
 import com.example.test5.recipe.flow.RecipeFlow;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 流程画布：拖动节点、连线；空白处拖动画布；双指缩放。
@@ -31,7 +35,8 @@ public final class FlowCanvasView extends View {
 
     private static final float NODE_WIDTH = 272f;
     private static final float NODE_HEIGHT = 124f;
-    private static final float PORT_RADIUS = 12f;
+    private static final float PORT_RADIUS = 18f;
+    private static final float ARROW_SIZE = 18f;
     private static final float MIN_SCALE = 0.35f;
     private static final float MAX_SCALE = 2.5f;
 
@@ -44,7 +49,14 @@ public final class FlowCanvasView extends View {
     private final Paint portPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint portStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint previewPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint runOverlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF nodeRect = new RectF();
+
+    private boolean runMode;
+    private final Set<String> activeNodeIds = new HashSet<>();
+    private final Set<String> completedNodeIds = new HashSet<>();
+    @Nullable
+    private String failedNodeId;
 
     private RecipeFlow flow = new RecipeFlow();
     private Listener listener;
@@ -58,6 +70,7 @@ public final class FlowCanvasView extends View {
     private float dragOffsetY;
 
     private FlowNode connectingFrom;
+    private String connectingFromPort;
     private float previewWorldX;
     private float previewWorldY;
 
@@ -72,6 +85,8 @@ public final class FlowCanvasView extends View {
     private boolean scaling;
     private float pinchStartSpan;
     private float pinchStartScale;
+
+    private boolean pendingFitToView;
 
     public FlowCanvasView(Context context) {
         super(context);
@@ -107,11 +122,88 @@ public final class FlowCanvasView extends View {
         portPaint.setStyle(Paint.Style.FILL);
         portStrokePaint.setColor(Color.parseColor("#334155"));
         portStrokePaint.setStyle(Paint.Style.STROKE);
-        portStrokePaint.setStrokeWidth(3f);
+        portStrokePaint.setStrokeWidth(4f);
 
         previewPaint.setColor(Color.parseColor("#94A3B8"));
         previewPaint.setStrokeWidth(4f);
         previewPaint.setStyle(Paint.Style.STROKE);
+
+        runOverlayPaint.setStyle(Paint.Style.FILL);
+    }
+
+    /** 运行监视模式：只读，高亮当前/已完成步骤。 */
+    public void setRunMode(boolean runMode) {
+        this.runMode = runMode;
+        if (runMode) {
+            selectedNode = null;
+            connectingFrom = null;
+            connectingFromPort = null;
+            draggingNode = null;
+        }
+        invalidate();
+    }
+
+    public void clearExecutionState() {
+        activeNodeIds.clear();
+        completedNodeIds.clear();
+        failedNodeId = null;
+        invalidate();
+    }
+
+    public void setNodeActive(@Nullable String nodeId, boolean active) {
+        if (nodeId == null) {
+            return;
+        }
+        if (active) {
+            activeNodeIds.add(nodeId);
+        } else {
+            activeNodeIds.remove(nodeId);
+        }
+        invalidate();
+    }
+
+    public void markNodeCompleted(@Nullable String nodeId) {
+        if (nodeId == null) {
+            return;
+        }
+        activeNodeIds.remove(nodeId);
+        completedNodeIds.add(nodeId);
+        invalidate();
+    }
+
+    public void markNodeFailed(@Nullable String nodeId) {
+        failedNodeId = nodeId;
+        if (nodeId != null) {
+            activeNodeIds.remove(nodeId);
+        }
+        invalidate();
+    }
+
+    /** 将流程居中缩放以适应视口。 */
+    public void fitFlowInView() {
+        if (flow.nodes.isEmpty() || getWidth() <= 0 || getHeight() <= 0) {
+            return;
+        }
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float maxX = Float.MIN_VALUE;
+        float maxY = Float.MIN_VALUE;
+        for (FlowNode node : flow.nodes) {
+            minX = Math.min(minX, node.x);
+            minY = Math.min(minY, node.y);
+            maxX = Math.max(maxX, node.x + NODE_WIDTH);
+            maxY = Math.max(maxY, node.y + NODE_HEIGHT);
+        }
+        float flowW = maxX - minX;
+        float flowH = maxY - minY;
+        float pad = 48f;
+        float viewW = getWidth();
+        float viewH = getHeight();
+        scale = Math.min((viewW - pad * 2f) / flowW, (viewH - pad * 2f) / flowH);
+        scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+        offsetX = (viewW - flowW * scale) / 2f - minX * scale;
+        offsetY = (viewH - flowH * scale) / 2f - minY * scale;
+        invalidate();
     }
 
     public void setListener(Listener listener) {
@@ -122,7 +214,31 @@ public final class FlowCanvasView extends View {
         this.flow = flow != null ? flow : new RecipeFlow();
         selectedNode = null;
         connectingFrom = null;
+        connectingFromPort = null;
         invalidate();
+    }
+
+    /** 设置流程并自动缩放居中，使全部节点一进入即可见。 */
+    public void setFlowAndFitToView(RecipeFlow flow) {
+        setFlow(flow);
+        pendingFitToView = true;
+        post(this::tryFitFlowInView);
+    }
+
+    private void tryFitFlowInView() {
+        if (!pendingFitToView) {
+            return;
+        }
+        if (getWidth() > 0 && getHeight() > 0 && !flow.nodes.isEmpty()) {
+            fitFlowInView();
+            pendingFitToView = false;
+        }
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        tryFitFlowInView();
     }
 
     public RecipeFlow getFlow() {
@@ -135,6 +251,20 @@ public final class FlowCanvasView extends View {
         selectedNode = node;
         notifyChanged();
         invalidate();
+    }
+
+    /** 在当前可见区域中心添加节点（考虑平移与缩放）。 */
+    public void addNodeAtViewportCenter(FlowActionDef def) {
+        float viewW = getWidth() > 0 ? getWidth() : 800f;
+        float viewH = getHeight() > 0 ? getHeight() : 600f;
+        float worldCenterX = (viewW / 2f - offsetX) / scale;
+        float worldCenterY = (viewH / 2f - offsetY) / scale;
+        int n = flow.nodes.size();
+        float staggerX = (n % 3) * 24f;
+        float staggerY = (n / 3) * 24f;
+        float x = worldCenterX - NODE_WIDTH / 2f + staggerX;
+        float y = worldCenterY - NODE_HEIGHT / 2f + staggerY;
+        addNode(def, x, y);
     }
 
     public void removeSelectedNode() {
@@ -154,6 +284,7 @@ public final class FlowCanvasView extends View {
         flow.edges.clear();
         selectedNode = null;
         connectingFrom = null;
+        connectingFromPort = null;
         notifyChanged();
         invalidate();
     }
@@ -200,14 +331,18 @@ public final class FlowCanvasView extends View {
             if (from == null || to == null) {
                 continue;
             }
-            drawEdge(canvas, outputX(from), outputY(from), inputX(to), inputY(to), linePaint);
+            String fromPort = resolveFromPort(edge, from, to);
+            String toPort = resolveToPort(edge, from, to);
+            float[] p1 = portPosition(from, fromPort);
+            float[] p2 = portPosition(to, toPort);
+            drawEdgeWithArrow(canvas, p1[0], p1[1], p2[0], p2[1], linePaint);
         }
-        if (connectingFrom != null) {
-            drawEdge(canvas, outputX(connectingFrom), outputY(connectingFrom),
-                    previewWorldX, previewWorldY, previewPaint);
+        if (connectingFrom != null && connectingFromPort != null) {
+            float[] start = portPosition(connectingFrom, connectingFromPort);
+            drawEdge(canvas, start[0], start[1], previewWorldX, previewWorldY, previewPaint);
         }
         for (FlowNode node : flow.nodes) {
-            drawNode(canvas, node, node == selectedNode);
+            drawNode(canvas, node, !runMode && node == selectedNode);
         }
         canvas.restore();
     }
@@ -216,10 +351,42 @@ public final class FlowCanvasView extends View {
         float left = node.x;
         float top = node.y;
         nodeRect.set(left, top, left + NODE_WIDTH, top + NODE_HEIGHT);
-        nodePaint.setColor(deviceColor(node.deviceId));
+
+        boolean isActive = activeNodeIds.contains(node.id);
+        boolean isDone = completedNodeIds.contains(node.id);
+        boolean isFailed = node.id.equals(failedNodeId);
+
+        int baseColor = deviceColor(node.deviceId);
+        if (runMode && isDone) {
+            baseColor = blendColor(baseColor, Color.parseColor("#22C55E"), 0.35f);
+        } else if (runMode && isFailed) {
+            baseColor = blendColor(baseColor, Color.parseColor("#EF4444"), 0.35f);
+        } else if (runMode && isActive) {
+            baseColor = blendColor(baseColor, Color.parseColor("#F59E0B"), 0.25f);
+        }
+
+        nodePaint.setColor(baseColor);
         canvas.drawRoundRect(nodeRect, 16f, 16f, nodePaint);
-        nodeStrokePaint.setColor(selected ? Color.parseColor("#FACC15") : Color.parseColor("#1E293B"));
+
+        if (runMode && isActive) {
+            nodeStrokePaint.setColor(Color.parseColor("#F59E0B"));
+            nodeStrokePaint.setStrokeWidth(6f);
+        } else if (runMode && isDone) {
+            nodeStrokePaint.setColor(Color.parseColor("#16A34A"));
+            nodeStrokePaint.setStrokeWidth(5f);
+        } else if (runMode && isFailed) {
+            nodeStrokePaint.setColor(Color.parseColor("#DC2626"));
+            nodeStrokePaint.setStrokeWidth(6f);
+        } else {
+            nodeStrokePaint.setColor(selected ? Color.parseColor("#FACC15") : Color.parseColor("#1E293B"));
+            nodeStrokePaint.setStrokeWidth(3f);
+        }
         canvas.drawRoundRect(nodeRect, 16f, 16f, nodeStrokePaint);
+
+        if (runMode && isActive) {
+            runOverlayPaint.setColor(Color.parseColor("#33F59E0B"));
+            canvas.drawRoundRect(nodeRect, 16f, 16f, runOverlayPaint);
+        }
 
         float padding = 14f;
         float lineGap = 30f;
@@ -234,10 +401,42 @@ public final class FlowCanvasView extends View {
             canvas.drawText(summary, left + padding, textY, paramPaint);
         }
 
-        canvas.drawCircle(inputX(node), inputY(node), PORT_RADIUS, portPaint);
-        canvas.drawCircle(inputX(node), inputY(node), PORT_RADIUS, portStrokePaint);
-        canvas.drawCircle(outputX(node), outputY(node), PORT_RADIUS, portPaint);
-        canvas.drawCircle(outputX(node), outputY(node), PORT_RADIUS, portStrokePaint);
+        if (!runMode) {
+            for (String port : FlowPort.all()) {
+                float[] pos = portPosition(node, port);
+                canvas.drawCircle(pos[0], pos[1], PORT_RADIUS, portPaint);
+                canvas.drawCircle(pos[0], pos[1], PORT_RADIUS, portStrokePaint);
+            }
+        }
+    }
+
+    private static int blendColor(int base, int overlay, float ratio) {
+        ratio = Math.max(0f, Math.min(1f, ratio));
+        int r = (int) (Color.red(base) * (1f - ratio) + Color.red(overlay) * ratio);
+        int g = (int) (Color.green(base) * (1f - ratio) + Color.green(overlay) * ratio);
+        int b = (int) (Color.blue(base) * (1f - ratio) + Color.blue(overlay) * ratio);
+        return Color.rgb(r, g, b);
+    }
+
+    private void drawEdgeWithArrow(Canvas canvas, float x1, float y1, float x2, float y2, Paint paint) {
+        float cx = (x1 + x2) / 2f;
+        Path path = new Path();
+        path.moveTo(x1, y1);
+        path.cubicTo(cx, y1, cx, y2, x2, y2);
+        canvas.drawPath(path, paint);
+
+        float t = 0.92f;
+        float u = 1f - t;
+        float nearX = u * u * u * x1 + 3f * u * u * t * cx + 3f * u * t * t * cx + t * t * t * x2;
+        float nearY = u * u * u * y1 + 3f * u * u * t * y1 + 3f * u * t * t * y2 + t * t * t * y2;
+        float inDx = x2 - nearX;
+        float inDy = y2 - nearY;
+        if (Math.hypot(inDx, inDy) < 1f) {
+            inDx = x2 - x1;
+            inDy = y2 - y1;
+        }
+        float angle = (float) Math.atan2(inDy, inDx);
+        drawArrowHead(canvas, x2, y2, angle, paint);
     }
 
     private void drawEdge(Canvas canvas, float x1, float y1, float x2, float y2, Paint paint) {
@@ -246,6 +445,21 @@ public final class FlowCanvasView extends View {
         path.moveTo(x1, y1);
         path.cubicTo(cx, y1, cx, y2, x2, y2);
         canvas.drawPath(path, paint);
+    }
+
+    private void drawArrowHead(Canvas canvas, float tipX, float tipY, float angle, Paint strokePaint) {
+        float wing = ARROW_SIZE;
+        float a1 = angle + (float) Math.toRadians(150);
+        float a2 = angle + (float) Math.toRadians(210);
+        Path arrow = new Path();
+        arrow.moveTo(tipX, tipY);
+        arrow.lineTo(tipX + wing * (float) Math.cos(a1), tipY + wing * (float) Math.sin(a1));
+        arrow.lineTo(tipX + wing * (float) Math.cos(a2), tipY + wing * (float) Math.sin(a2));
+        arrow.close();
+        Paint fill = new Paint(strokePaint);
+        fill.setStyle(Paint.Style.FILL);
+        canvas.drawPath(arrow, fill);
+        canvas.drawPath(arrow, strokePaint);
     }
 
     @Override
@@ -280,6 +494,7 @@ public final class FlowCanvasView extends View {
         panning = false;
         draggingNode = null;
         connectingFrom = null;
+        connectingFromPort = null;
 
         float span = pinchSpan(event);
         float focusX = pinchFocusX(event);
@@ -334,14 +549,25 @@ public final class FlowCanvasView extends View {
     }
 
     private boolean handleDown(float screenX, float screenY) {
+        if (runMode) {
+            panning = true;
+            panStartScreenX = screenX;
+            panStartScreenY = screenY;
+            panStartOffsetX = offsetX;
+            panStartOffsetY = offsetY;
+            return true;
+        }
+
         float worldX = toWorldX(screenX);
         float worldY = toWorldY(screenY);
 
-        FlowNode portNode = findPortNode(worldX, worldY, true);
-        if (portNode != null) {
-            connectingFrom = portNode;
-            previewWorldX = worldX;
-            previewWorldY = worldY;
+        PortHit portHit = findPortHit(worldX, worldY);
+        if (portHit != null) {
+            connectingFrom = portHit.node;
+            connectingFromPort = portHit.port;
+            float[] start = portPosition(portHit.node, portHit.port);
+            previewWorldX = start[0];
+            previewWorldY = start[1];
             panning = false;
             invalidate();
             return true;
@@ -394,14 +620,15 @@ public final class FlowCanvasView extends View {
     }
 
     private boolean handleUp(float screenX, float screenY) {
-        if (connectingFrom != null) {
+        if (connectingFrom != null && !runMode) {
             float worldX = toWorldX(screenX);
             float worldY = toWorldY(screenY);
-            FlowNode target = findPortNode(worldX, worldY, false);
-            if (target != null && !target.id.equals(connectingFrom.id)) {
-                addOrReplaceEdge(connectingFrom.id, target.id);
+            PortHit target = findPortHit(worldX, worldY);
+            if (target != null && !target.node.id.equals(connectingFrom.id) && connectingFromPort != null) {
+                addOrReplaceEdge(connectingFrom.id, connectingFromPort, target.node.id, target.port);
             }
             connectingFrom = null;
+            connectingFromPort = null;
             invalidate();
             return true;
         }
@@ -410,12 +637,12 @@ public final class FlowCanvasView extends View {
         return true;
     }
 
-    private void addOrReplaceEdge(String fromId, String toId) {
+    private void addOrReplaceEdge(String fromId, String fromPort, String toId, String toPort) {
         if (fromId.equals(toId)) {
             return;
         }
         flow.edges.removeIf(edge -> edge.fromNodeId.equals(fromId) && edge.toNodeId.equals(toId));
-        flow.edges.add(new FlowEdge(fromId, toId));
+        flow.edges.add(new FlowEdge(fromId, fromPort, toId, toPort));
         notifyChanged();
     }
 
@@ -464,35 +691,96 @@ public final class FlowCanvasView extends View {
     }
 
     @Nullable
-    private FlowNode findPortNode(float worldX, float worldY, boolean output) {
-        float hitRadius = PORT_RADIUS * 2f;
+    private PortHit findPortHit(float worldX, float worldY) {
+        float hitRadius = PORT_RADIUS * 2.5f;
+        float hitR2 = hitRadius * hitRadius;
         for (int i = flow.nodes.size() - 1; i >= 0; i--) {
             FlowNode node = flow.nodes.get(i);
-            float cx = output ? outputX(node) : inputX(node);
-            float cy = output ? outputY(node) : inputY(node);
-            float dx = worldX - cx;
-            float dy = worldY - cy;
-            if (dx * dx + dy * dy <= hitRadius * hitRadius) {
-                return node;
+            for (String port : FlowPort.all()) {
+                float[] pos = portPosition(node, port);
+                float dx = worldX - pos[0];
+                float dy = worldY - pos[1];
+                if (dx * dx + dy * dy <= hitR2) {
+                    return new PortHit(node, port);
+                }
             }
         }
         return null;
     }
 
-    private static float inputX(FlowNode node) {
-        return node.x;
+    private static float[] portPosition(FlowNode node, String port) {
+        float x;
+        float y;
+        switch (port) {
+            case FlowPort.LEFT:
+                x = node.x;
+                y = node.y + NODE_HEIGHT / 2f;
+                break;
+            case FlowPort.TOP:
+                x = node.x + NODE_WIDTH / 2f;
+                y = node.y;
+                break;
+            case FlowPort.BOTTOM:
+                x = node.x + NODE_WIDTH / 2f;
+                y = node.y + NODE_HEIGHT;
+                break;
+            case FlowPort.RIGHT:
+            default:
+                x = node.x + NODE_WIDTH;
+                y = node.y + NODE_HEIGHT / 2f;
+                break;
+        }
+        return new float[]{x, y};
     }
 
-    private static float inputY(FlowNode node) {
-        return node.y + NODE_HEIGHT / 2f;
+    private static String resolveFromPort(FlowEdge edge, FlowNode from, FlowNode to) {
+        if (FlowPort.isValid(edge.fromPort)) {
+            return edge.fromPort;
+        }
+        return pickDefaultFromPort(from, to);
     }
 
-    private static float outputX(FlowNode node) {
-        return node.x + NODE_WIDTH;
+    private static String resolveToPort(FlowEdge edge, FlowNode from, FlowNode to) {
+        if (FlowPort.isValid(edge.toPort)) {
+            return edge.toPort;
+        }
+        return pickDefaultToPort(from, to);
     }
 
-    private static float outputY(FlowNode node) {
-        return node.y + NODE_HEIGHT / 2f;
+    private static String pickDefaultFromPort(FlowNode from, FlowNode to) {
+        float fx = from.x + NODE_WIDTH / 2f;
+        float fy = from.y + NODE_HEIGHT / 2f;
+        float tx = to.x + NODE_WIDTH / 2f;
+        float ty = to.y + NODE_HEIGHT / 2f;
+        float dx = tx - fx;
+        float dy = ty - fy;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return dx > 0 ? FlowPort.RIGHT : FlowPort.LEFT;
+        }
+        return dy > 0 ? FlowPort.BOTTOM : FlowPort.TOP;
+    }
+
+    private static String pickDefaultToPort(FlowNode from, FlowNode to) {
+        float fx = from.x + NODE_WIDTH / 2f;
+        float fy = from.y + NODE_HEIGHT / 2f;
+        float tx = to.x + NODE_WIDTH / 2f;
+        float ty = to.y + NODE_HEIGHT / 2f;
+        float dx = tx - fx;
+        float dy = ty - fy;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return dx > 0 ? FlowPort.LEFT : FlowPort.RIGHT;
+        }
+        return dy > 0 ? FlowPort.TOP : FlowPort.BOTTOM;
+    }
+
+    private static final class PortHit {
+        final FlowNode node;
+        final String port;
+
+        PortHit(FlowNode node, String port) {
+            this.node = node;
+            this.port = port;
+        }
     }
 
     private static int deviceColor(String deviceId) {

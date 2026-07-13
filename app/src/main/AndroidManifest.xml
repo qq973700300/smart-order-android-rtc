@@ -75,6 +75,10 @@
             android:exported="false"
             android:screenOrientation="sensorLandscape" />
         <activity
+            android:name=".FlowProductionRunActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
             android:name=".ManualOrderActivity"
             android:exported="false"
             android:screenOrientation="sensorLandscape" />
@@ -84,6 +88,10 @@
             android:screenOrientation="sensorLandscape" />
         <activity
             android:name=".DrumPotSettingsActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape" />
+        <activity
+            android:name=".ProductionLogActivity"
             android:exported="false"
             android:screenOrientation="sensorLandscape" />
         <activity

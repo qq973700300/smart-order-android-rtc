@@ -6,6 +6,7 @@ import com.example.test5.device.opcua.DrumPotConnectionManager;
 import com.example.test5.device.tashi.StockBinConnectionManager;
 import com.example.test5.net.NetworkDiagnostics;
 import com.example.test5.recipe.DishsConfigStore;
+import com.example.test5.log.ProductionLogStore;
 import com.example.test5.order.mq.MqSettingsStore;
 import com.example.test5.order.mq.OrderMqManager;
 import com.example.test5.wake.IflytekSdkHolder;
@@ -17,6 +18,7 @@ public class SmartOrderApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        ProductionLogStore.init(this);
         NetworkDiagnostics.init(this);
         MqSettingsStore.ensurePolicyDefaults(this);
         StockBinConnectionManager.getInstance(this).connectAsync();

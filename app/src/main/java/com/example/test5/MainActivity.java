@@ -444,6 +444,10 @@ public class MainActivity extends AppCompatActivity implements OrderInbox.Listen
                 startActivity(new Intent(this, DrumPotSettingsActivity.class));
                 return true;
             }
+            if (id == R.id.menu_production_log) {
+                startActivity(new Intent(this, ProductionLogActivity.class));
+                return true;
+            }
             if (id == R.id.menu_admin_debug) {
                 showAdminPasswordDialog();
                 return true;

@@ -68,9 +68,13 @@
             android:padding="16dp">
 
             <LinearLayout
+                android:id="@+id/cart_info_area"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:orientation="vertical">
 
                 <TextView
@@ -88,6 +92,17 @@
                     android:textAppearance="?attr/textAppearanceBodyMedium"
                     android:textColor="?android:attr/textColorSecondary"
                     tools:text="芹菜炒肉 x1，辣椒炒肉 x2" />
+
+                <TextView
+                    android:id="@+id/cart_expand_hint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/cart_tap_expand"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?android:attr/textColorTertiary"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
